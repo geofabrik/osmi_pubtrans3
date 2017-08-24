@@ -42,12 +42,6 @@ public:
 
     virtual ~AbstractViewHandler();
 
-    virtual void node(const osmium::Node&) = 0;
-
-    virtual void way(const osmium::Way&) = 0;
-
-    virtual void relation(const osmium::Relation&) = 0;
-
     /**
      * Get a pointer to the dataset being used. The ownership will stay at AbstractViewHandler.
      */
