@@ -17,6 +17,20 @@ enum class RouteType : char {
     RAIL
 };
 
+enum class MemberStatus : char {
+    BEFORE_FIRST = 0,
+    FIRST = 1,
+    SECOND = 2,
+    NORMAL = 3,
+    /// The first way after way which is not connected to its predecessor.
+    AFTER_GAP = 4,
+    MISSING = 5,
+    AFTER_MISSING = 6,
+    ROUNDABOUT = 7,
+    SECOND_ROUNDABOUT = 8,
+    AFTER_ROUNDABOUT = 9
+};
+
 class RouteManager : public osmium::relations::RelationsManager<RouteManager, true, true, true, false>, OGROutputBase {
     gdalcpp::Dataset& m_dataset;
     gdalcpp::Layer m_ptv2_routes_valid;
@@ -60,6 +74,8 @@ public:
     void complete_relation(const osmium::Relation& relation);
 
     static bool roundabout_connected_to_previous_way(const osmium::NodeRef* common_node, const osmium::Way* way);
+
+    static bool roundabout_as_second_after_gap(const osmium::Way* previous_way, const osmium::Way* way);
 
     static const osmium::NodeRef* roundabout_connected_to_next_way(const osmium::Way* previous_way, const osmium::Way* way);
 };
