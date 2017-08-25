@@ -51,11 +51,11 @@ enum class RouteError : size_t {
 };
 
 inline RouteError& operator|= (RouteError& a, const RouteError& b) {
-    return a = (RouteError)((size_t)a | (size_t)b);
+    return a = static_cast<RouteError>(static_cast<size_t>(a) | static_cast<size_t>(b));
 }
 
 inline RouteError operator&(const RouteError&a , const RouteError& b) {
-    return (RouteError)((size_t)a & (size_t)b);
+    return static_cast<RouteError>(static_cast<size_t>(a) & static_cast<size_t>(b));
 }
 
 class RouteManager : public osmium::relations::RelationsManager<RouteManager, true, true, true, false>, OGROutputBase {
