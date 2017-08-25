@@ -437,7 +437,7 @@ void RouteManager::write_valid_route(const osmium::Relation& relation, std::vect
             ml->addGeometry(geom.get());
         }
         catch (osmium::geometry_error& e) {
-            std::cerr << e.what() << std::endl;
+            m_verbose_output << e.what() << '\n';
         }
     }
     gdalcpp::Feature feature(m_ptv2_routes_valid, std::unique_ptr<OGRGeometry> (ml));
