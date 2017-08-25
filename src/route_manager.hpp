@@ -14,7 +14,12 @@
 enum class RouteType : char {
     NONE,
     BUS,
-    RAIL
+    TROLLEYBUS,
+    AERIALWAY,
+    FERRY,
+    TRAIN,
+    TRAM,
+    SUBWAY
 };
 
 enum class MemberStatus : char {
@@ -31,6 +36,28 @@ enum class MemberStatus : char {
     AFTER_ROUNDABOUT = 9
 };
 
+enum class RouteError : size_t {
+    CLEAN = 0,
+    OVER_NON_RAIL = 1,
+    OVER_NON_ROAD = 2,
+    NO_TROLLEY_WIRE = 4,
+    UNORDERED_GAP = 8,
+    WRONG_STRUCTURE = 16,
+    NO_STOPPLTF_AT_FRONT = 32,
+    EMPTY_ROLE_NON_WAY = 64,
+    STOPPLTF_AFTER_ROUTE = 128,
+    STOP_NOT_ON_WAY = 256,
+    NO_ROUTE = 512
+};
+
+inline RouteError& operator|= (RouteError& a, const RouteError& b) {
+    return a = (RouteError)((size_t)a | (size_t)b);
+}
+
+inline RouteError operator&(const RouteError&a , const RouteError& b) {
+    return (RouteError)((size_t)a & (size_t)b);
+}
+
 class RouteManager : public osmium::relations::RelationsManager<RouteManager, true, true, true, false>, OGROutputBase {
     gdalcpp::Dataset& m_dataset;
     gdalcpp::Layer m_ptv2_routes_valid;
@@ -42,26 +69,43 @@ class RouteManager : public osmium::relations::RelationsManager<RouteManager, tr
 
     bool is_ptv2(const osmium::Relation& relation);
 
-    size_t is_valid(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
+    RouteError is_valid(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
             std::vector<const char*>& roles);
 
-    size_t check_roles_order_and_type(const RouteType type, std::vector<const osmium::OSMObject*>& member_objects,
+    static RouteType get_route_type(const char* route);
+
+    RouteError check_roles_order_and_type(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
             std::vector<const char*>& roles);
 
-    size_t find_gaps(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
+    static bool is_stop_or_platform(const char* role);
+
+    RouteError is_way_usable(const osmium::Relation& relation, RouteType type, const osmium::Way* way);
+
+    static bool check_valid_railway_track(RouteType type, const osmium::TagList& member_tags);
+
+    static bool check_valid_road_way(const osmium::TagList& member_tags);
+
+    static bool check_valid_trolleybus_way(const osmium::TagList& member_tags);
+
+    static bool is_ferry(const osmium::TagList& member_tags);
+
+    RouteError find_gaps(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
             std::vector<const char*>& roles);
 
     void write_valid_route(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
             std::vector<const char*>& roles);
 
     void write_invalid_route(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
-            std::vector<const char*>& roles, size_t validation_result);
+            std::vector<const char*>& roles, RouteError validation_result);
 
     void write_error_way(const osmium::Relation& relation, const osmium::object_id_type node_id,
             const char* error_text, const osmium::Way* way);
 
     void write_error_point(const osmium::Relation& relation, const osmium::NodeRef* node_ref,
             const char* error_text, const osmium::object_id_type way_id);
+
+    void write_error_point(const osmium::Relation& relation, const osmium::object_id_type node_ref,
+            const osmium::Location& location, const char* error_text, const osmium::object_id_type way_id);
 
 public:
     RouteManager() = delete;
