@@ -5,7 +5,6 @@
  *      Author: Michael Reichert <michael.reichert@geofabrik.de>
  */
 
-#include <ogr_core.h>
 #include <osmium/osm/item_type.hpp>
 
 #include "route_manager.hpp"
@@ -13,61 +12,7 @@
 
 RouteManager::RouteManager(gdalcpp::Dataset& dataset, std::string& output_format,
     osmium::util::VerboseOutput& verbose_output, int epsg /*= 3857*/) :
-        OGROutputBase(verbose_output, output_format, epsg),
-        m_dataset(dataset),
-        m_ptv2_routes_valid(dataset, "ptv2_routes_valid", wkbMultiLineString, GDAL_DEFAULT_OPTIONS),
-        m_ptv2_routes_invalid(dataset, "ptv2_routes_invalid", wkbMultiLineString, GDAL_DEFAULT_OPTIONS),
-        m_ptv2_error_lines(dataset, "ptv2_error_lines", wkbLineString, GDAL_DEFAULT_OPTIONS),
-        m_ptv2_error_points(dataset, "ptv2_error_points", wkbPoint, GDAL_DEFAULT_OPTIONS) {
-    m_ptv2_routes_valid.add_field("from", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_valid.add_field("to", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_valid.add_field("via", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_valid.add_field("ref", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_valid.add_field("name", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_valid.add_field("operator", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_valid.add_field("route", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_valid.add_field("rel_id", OFTString, 10);
-    m_ptv2_routes_invalid.add_field("from", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_invalid.add_field("to", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_invalid.add_field("via", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_invalid.add_field("ref", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_invalid.add_field("name", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_invalid.add_field("operator", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_invalid.add_field("route", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_routes_invalid.add_field("rel_id", OFTString, 10);
-    m_ptv2_routes_invalid.add_field("error_over_non_rail", OFTString, 1);
-    m_ptv2_routes_invalid.add_field("error_over_rail", OFTString, 1);
-    m_ptv2_routes_invalid.add_field("error_unordered_gap", OFTString, 1);
-    m_ptv2_routes_invalid.add_field("error_wrong_structure", OFTString, 1);
-    m_ptv2_routes_invalid.add_field("no_stops_pltf_at_begin", OFTString, 1);
-    m_ptv2_routes_invalid.add_field("stoppltf_after_route", OFTString, 1);
-    m_ptv2_routes_invalid.add_field("non_way_empty_role", OFTString, 1);
-    m_ptv2_routes_invalid.add_field("stop_not_on_way", OFTString, 1);
-    m_ptv2_routes_invalid.add_field("no_way_members", OFTString, 1);
-    m_ptv2_routes_invalid.add_field("unknown_role", OFTString, 1);
-    m_ptv2_routes_invalid.add_field("unknown_route_type", OFTString, 1);
-    m_ptv2_routes_invalid.add_field("stop_is_not_node", OFTString, 1);
-    m_ptv2_error_lines.add_field("rel_id", OFTString, 10);
-    m_ptv2_error_lines.add_field("way_id", OFTString, 10);
-    m_ptv2_error_lines.add_field("node_id", OFTString, 10);
-    m_ptv2_error_lines.add_field("error", OFTString, 50);
-    m_ptv2_error_lines.add_field("from", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_error_lines.add_field("to", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_error_lines.add_field("via", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_error_lines.add_field("ref", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_error_lines.add_field("name", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_error_lines.add_field("route", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_error_points.add_field("rel_id", OFTString, 10);
-    m_ptv2_error_points.add_field("way_id", OFTString, 10);
-    m_ptv2_error_points.add_field("node_id", OFTString, 10);
-    m_ptv2_error_points.add_field("error", OFTString, 50);
-    m_ptv2_error_points.add_field("from", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_error_points.add_field("to", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_error_points.add_field("via", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_error_points.add_field("ref", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_error_points.add_field("name", OFTString, MAX_FIELD_LENGTH);
-    m_ptv2_error_points.add_field("route", OFTString, MAX_FIELD_LENGTH);
-}
+        m_writer(dataset, output_format, verbose_output, epsg) { }
 
 bool RouteManager::new_relation(const osmium::Relation& relation) const noexcept {
     const char* type = relation.get_value_by_key("type");
@@ -102,10 +47,15 @@ void RouteManager::process_route(const osmium::Relation& relation) {
     if (is_ptv2(relation)) {
         RouteError validation_result = is_valid(relation, member_objects, roles);
         if (validation_result == RouteError::CLEAN) {
-            write_valid_route(relation, member_objects, roles);
+            m_writer.write_valid_route(relation, member_objects, roles);
             return;
         }
-        write_invalid_route(relation, member_objects, roles, validation_result);
+        m_writer.write_invalid_route(relation, member_objects, roles, validation_result);
+    } else {
+        // We try validation for non-PTv2 routes against PTv2 rules because some
+        // are not tagged as PTv2 routes but are PTv2.
+        is_valid(relation, member_objects, roles);
+
     }
 }
 
@@ -149,6 +99,7 @@ RouteType RouteManager::get_route_type(const char* route) {
 RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& relation) {
     bool seen_road_member = false;
     bool seen_stop_platform = false;
+    bool incomplete = false;
     RouteError error = RouteError::CLEAN;
     RouteType type = get_route_type(relation.get_value_by_key("route"));
     if (type == RouteType::NONE) {
@@ -156,11 +107,10 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
     }
     for (const osmium::RelationMember& member : relation.members()) {
         const osmium::OSMObject* object = nullptr;
-        if (member.ref() != 0) {
+        if (member.full_member()) {
             object = this->get_member_object(member);
-        }
-        if (!object) {
-            //TODO work with RelationMemberList class instead of std::vector<osmium::OSMObject*>
+        } else {
+            incomplete = true;
             continue;
         }
         if (member.type() == osmium::item_type::way && !strcmp(member.role(), "")) {
@@ -171,7 +121,7 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
             if (member.type() != osmium::item_type::way) {
                 if (member.type() == osmium::item_type::node && object) {
                     const osmium::Node* node = static_cast<const osmium::Node*>(object);
-                    write_error_point(relation, node->id(), node->location(), "empty role for non-way object", 0);
+                    m_writer.write_error_point(relation, node->id(), node->location(), "empty role for non-way object", 0);
                 }
                 error |= RouteError::EMPTY_ROLE_NON_WAY;
             }
@@ -183,11 +133,11 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
             if (object) {
                 switch (member.type()) {
                 case osmium::item_type::node:
-                    write_error_point(relation, static_cast<const osmium::Node*>(object)->id(),
+                    m_writer.write_error_point(relation, static_cast<const osmium::Node*>(object)->id(),
                             static_cast<const osmium::Node*>(object)->location(), "stop/platform after route", 0);
                     break;
                 case osmium::item_type::way:
-                    write_error_way(relation, 0, "stop/platform after route",
+                    m_writer.write_error_way(relation, 0, "stop/platform after route",
                             static_cast<const osmium::Way*>(object));
                     break;
                 default:
@@ -203,7 +153,7 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
         } else if (member.type() == osmium::item_type::way && is_stop(member.role())) {
             error |= RouteError::STOP_IS_NOT_NODE;
             if (object) {
-                write_error_way(relation, 0, "stop is not a node", static_cast<const osmium::Way*>(object));
+                m_writer.write_error_way(relation, 0, "stop is not a node", static_cast<const osmium::Way*>(object));
             }
         } else if (is_platform(member.role())) {
             seen_stop_platform = true;
@@ -219,10 +169,10 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
                 error_msg += "'";
                 switch (member.type()) {
                 case osmium::item_type::node:
-                    write_error_point(relation, member.ref(), static_cast<const osmium::Node*>(object)->location(), error_msg.c_str(), 0);
+                    m_writer.write_error_point(relation, member.ref(), static_cast<const osmium::Node*>(object)->location(), error_msg.c_str(), 0);
                     break;
                 case osmium::item_type::way:
-                    write_error_way(relation, 0, error_msg.c_str(), static_cast<const osmium::Way*>(object));
+                    m_writer.write_error_way(relation, 0, error_msg.c_str(), static_cast<const osmium::Way*>(object));
                     break;
                 default:
                     break;
@@ -230,23 +180,23 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
             }
         }
     }
-    if (!seen_road_member) {
+    if (!seen_road_member && !incomplete) {
         // route contains no highway/railway members
         error |= RouteError::NO_ROUTE;
         // write all members as errors
         for (const osmium::RelationMember& member : relation.members()) {
-            if (member.ref() == 0) {
+            if (!member.full_member()) {
                 continue;
             }
             switch (member.type()) {
             case osmium::item_type::node: {
                 const osmium::Node* node = this->get_member_node(member.ref());
-                write_error_point(relation, node->id(), node->location(), "route has only stops/platforms", 0);
+                m_writer.write_error_point(relation, node->id(), node->location(), "route has only stops/platforms", 0);
                 break;
             }
             case osmium::item_type::way: {
                 const osmium::Way* way = this->get_member_way(member.ref());
-                write_error_way(relation, 0, "route has only stops/platforms", way);
+                m_writer.write_error_way(relation, 0, "route has only stops/platforms", way);
                 break;
             }
             default:
@@ -270,24 +220,24 @@ RouteError RouteManager::check_stop_tags(const osmium::Relation& relation, const
         return RouteError::CLEAN;
     }
     if ((type == RouteType::BUS || type == RouteType::TROLLEYBUS) && !node->tags().has_tag("highway", "bus_stop")) {
-        write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
+        m_writer.write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
         return RouteError::STOP_TAG_MISSING;
     }
     if (type == RouteType::TRAIN && !node->tags().has_tag("railway", "station")
             && !node->tags().has_tag("railway", "halt") && !node->tags().has_tag("railway", "tram_stop")) {
-        write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
+        m_writer.write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
         return RouteError::STOP_TAG_MISSING;
     }
     if (type == RouteType::SUBWAY && !node->tags().has_tag("railway", "station")) {
-        write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
+        m_writer.write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
         return RouteError::STOP_TAG_MISSING;
     }
     if (type == RouteType::FERRY && !node->tags().has_tag("amenity", "ferry_terminal")) {
-        write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
+        m_writer.write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
         return RouteError::STOP_TAG_MISSING;
     }
     if (type == RouteType::AERIALWAY && !node->tags().has_tag("aerialway", "station")) {
-        write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
+        m_writer.write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
         return RouteError::STOP_TAG_MISSING;
     }
     return RouteError::CLEAN;
@@ -324,9 +274,9 @@ RouteError RouteManager::check_platform_tags(const osmium::Relation& relation, c
             && !object->tags().has_tag("railway", "platform"))) {
         if (object->type() == osmium::item_type::node) {
             const osmium::Node* node = static_cast<const osmium::Node*>(object);
-            write_error_point(relation, node->id(), node->location(), "platform without proper tags", 0);
+            m_writer.write_error_point(relation, node->id(), node->location(), "platform without proper tags", 0);
         } else if (object->type() == osmium::item_type::way) {
-            write_error_way(relation, 0, "platform without proper tags", static_cast<const osmium::Way*>(object));
+            m_writer.write_error_way(relation, 0, "platform without proper tags", static_cast<const osmium::Way*>(object));
         }
         return RouteError::PLTF_TAG_MISSING;
     }
@@ -339,20 +289,20 @@ RouteError RouteManager::is_way_usable(const osmium::Relation& relation, RouteTy
     case RouteType::TRAM:
     case RouteType::SUBWAY:
         if (!check_valid_railway_track(type, way->tags())) {
-            write_error_way(relation, 0, "rail-guided route over non-rail", way);
+            m_writer.write_error_way(relation, 0, "rail-guided route over non-rail", way);
             return RouteError::OVER_NON_RAIL;
         }
         break;
 
     case RouteType::BUS:
         if (!check_valid_road_way(way->tags())) {
-            write_error_way(relation, 0, "road vehicle route over non-road", way);
+            m_writer.write_error_way(relation, 0, "road vehicle route over non-road", way);
             return RouteError::OVER_NON_ROAD;
         }
         break;
     case RouteType::TROLLEYBUS:
         if (!check_valid_trolleybus_way(way->tags())) {
-            write_error_way(relation, 0, "trolley bus without trolley wire", way);
+            m_writer.write_error_way(relation, 0, "trolley bus without trolley wire", way);
             return RouteError::NO_TROLLEY_WIRE;
         }
         break;
@@ -442,12 +392,12 @@ RouteError RouteManager::find_gaps(const osmium::Relation& relation, std::vector
         const osmium::Way* way = static_cast<const osmium::Way*>(member);
         if (status == MemberStatus::AFTER_GAP) {
             // write this way member as error
-            write_error_way(relation, 0, "gap", way);
+            m_writer.write_error_way(relation, 0, "gap", way);
         }
         if (way->tags().has_tag("junction", "roundabout") && way->nodes().ends_have_same_id()) {
             if (status == MemberStatus::AFTER_ROUNDABOUT) {
                 // roundabout after another roundabout, this is an impossible geometry and shoud be fixed
-                write_error_way(relation, 0, "roundabout after roundabout", way);
+                m_writer.write_error_way(relation, 0, "roundabout after roundabout", way);
                 result |= RouteError::UNORDERED_GAP;
                 continue;
             }
@@ -476,7 +426,7 @@ RouteError RouteManager::find_gaps(const osmium::Relation& relation, std::vector
         if (status == MemberStatus::AFTER_ROUNDABOUT) {
             next_node = roundabout_connected_to_next_way(previous_way, way);
             if (next_node == nullptr) {
-                write_error_way(relation, 0, "gap", way);
+                m_writer.write_error_way(relation, 0, "gap", way);
                 status = MemberStatus::AFTER_GAP;
                 result |= RouteError::UNORDERED_GAP;
             } else {
@@ -485,14 +435,14 @@ RouteError RouteManager::find_gaps(const osmium::Relation& relation, std::vector
         } else if (status == MemberStatus::ROUNDABOUT) {
             // check if any of the nodes of the roundabout matches the beginning or end node
             if (!roundabout_connected_to_previous_way(next_node, way)) {
-                write_error_way(relation, 0, "gap", way);
-                write_error_point(relation, next_node, "gap at this location", way->id());
+                m_writer.write_error_way(relation, 0, "gap", way);
+                m_writer.write_error_point(relation, next_node, "gap at this location", way->id());
                 result |= RouteError::UNORDERED_GAP;
             }
             status = MemberStatus::AFTER_ROUNDABOUT;
         } else if (status == MemberStatus::SECOND_ROUNDABOUT) {
             if (!roundabout_as_second_after_gap(previous_way, way)) {
-                write_error_way(relation, 0, "gap", way);
+                m_writer.write_error_way(relation, 0, "gap", way);
                 result |= RouteError::UNORDERED_GAP;
             }
             status = MemberStatus::AFTER_ROUNDABOUT;
@@ -508,7 +458,7 @@ RouteError RouteManager::find_gaps(const osmium::Relation& relation, std::vector
                 next_node = &(way->nodes().front());
                 status = MemberStatus::NORMAL;
             } else {
-                write_error_way(relation, 0, "gap", previous_way);
+                m_writer.write_error_way(relation, 0, "gap", previous_way);
                 status = MemberStatus::AFTER_GAP;
                 result |= RouteError::UNORDERED_GAP;
             }
@@ -518,8 +468,8 @@ RouteError RouteManager::find_gaps(const osmium::Relation& relation, std::vector
             } else if (way->nodes().back().ref() == next_node->ref()) {
                 next_node = &(way->nodes().front());
             } else {
-                write_error_way(relation, next_node->ref(), "gap", previous_way);
-                write_error_point(relation, next_node, "gap at this location", way->id());
+                m_writer.write_error_way(relation, next_node->ref(), "gap", previous_way);
+                m_writer.write_error_point(relation, next_node, "gap at this location", way->id());
                 result |= RouteError::UNORDERED_GAP;
                 status = MemberStatus::SECOND;
             }
@@ -555,163 +505,4 @@ const osmium::NodeRef* RouteManager::roundabout_connected_to_next_way(const osmi
         }
     }
     return nullptr;
-}
-
-void RouteManager::write_valid_route(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
-        std::vector<const char*>& roles) {
-    OGRMultiLineString* ml = new OGRMultiLineString();
-    for (size_t i = 0; i < member_objects.size(); ++i) {
-        const osmium::OSMObject* member = member_objects.at(i);
-        if (!member || member->type() != osmium::item_type::way) {
-            continue;
-        }
-        const char* role = roles.at(i);
-        if (!role || (strcmp(role, "") && strcmp(role, "forward") && strcmp(role, "backward"))) {
-            continue;
-        }
-        const osmium::Way* way = static_cast<const osmium::Way*>(member);
-        try {
-            std::unique_ptr<OGRLineString> geom = m_factory.create_linestring(*way);
-            ml->addGeometry(geom.get());
-        }
-        catch (osmium::geometry_error& e) {
-            m_verbose_output << e.what() << '\n';
-        }
-    }
-    gdalcpp::Feature feature(m_ptv2_routes_valid, std::unique_ptr<OGRGeometry> (ml));
-    static char idbuffer[20];
-    sprintf(idbuffer, "%ld", relation.id());
-    feature.set_field("rel_id", idbuffer);
-    feature.set_field("name", relation.get_value_by_key("name"));
-    feature.set_field("ref", relation.get_value_by_key("ref"));
-    feature.set_field("from", relation.get_value_by_key("from"));
-    feature.set_field("to", relation.get_value_by_key("to"));
-    feature.set_field("via", relation.get_value_by_key("via"));
-    feature.set_field("route", relation.get_value_by_key("route"));
-    feature.set_field("operator", relation.get_value_by_key("operator"));
-    feature.add_to_layer();
-}
-
-void RouteManager::write_invalid_route(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
-        std::vector<const char*>& roles, RouteError validation_result) {
-    OGRMultiLineString* ml = new OGRMultiLineString();
-    for (const osmium::OSMObject* member : member_objects) {
-        if (!member) {
-            continue;
-        }
-        if (member->type() != osmium::item_type::way) {
-            continue;
-        }
-        const osmium::Way* way = static_cast<const osmium::Way*>(member);
-        try {
-            std::unique_ptr<OGRLineString> geom = m_factory.create_linestring(*way);
-            ml->addGeometry(geom.get());
-        }
-        catch (osmium::geometry_error& e) {
-            std::cerr << e.what() << std::endl;
-        }
-    }
-    gdalcpp::Feature feature(m_ptv2_routes_invalid, std::unique_ptr<OGRGeometry>(ml));
-    static char idbuffer[20];
-    sprintf(idbuffer, "%ld", relation.id());
-    feature.set_field("rel_id", idbuffer);
-    feature.set_field("name", relation.get_value_by_key("name"));
-    feature.set_field("ref", relation.get_value_by_key("ref"));
-    feature.set_field("from", relation.get_value_by_key("from"));
-    feature.set_field("to", relation.get_value_by_key("to"));
-    feature.set_field("via", relation.get_value_by_key("via"));
-    feature.set_field("route", relation.get_value_by_key("route"));
-    feature.set_field("operator", relation.get_value_by_key("operator"));
-    if ((validation_result & RouteError::OVER_NON_RAIL) == RouteError::OVER_NON_RAIL) {
-        feature.set_field("error_over_non_rail", "T");
-    }
-    if ((validation_result & RouteError::OVER_NON_ROAD) == RouteError::OVER_NON_ROAD) {
-        feature.set_field("error_over_rail", "T");
-    }
-    if ((validation_result & RouteError::UNORDERED_GAP) == RouteError::UNORDERED_GAP) {
-        feature.set_field("error_unordered_gap", "T");
-    }
-    if ((validation_result & RouteError::WRONG_STRUCTURE) == RouteError::WRONG_STRUCTURE) {
-        feature.set_field("error_wrong_structure", "T");
-    }
-    if ((validation_result & RouteError::NO_STOPPLTF_AT_FRONT) == RouteError::NO_STOPPLTF_AT_FRONT) {
-        feature.set_field("no_stops_pltf_at_begin", "T");
-    }
-    if ((validation_result & RouteError::EMPTY_ROLE_NON_WAY) == RouteError::EMPTY_ROLE_NON_WAY) {
-        feature.set_field("non_way_empty_role", "T");
-    }
-    if ((validation_result & RouteError::STOPPLTF_AFTER_ROUTE) == RouteError::STOPPLTF_AFTER_ROUTE) {
-        feature.set_field("stoppltf_after_route", "T");
-    }
-    if ((validation_result & RouteError::STOP_NOT_ON_WAY) == RouteError::STOP_NOT_ON_WAY) {
-        feature.set_field("stop_not_on_way", "T");
-    }
-    if ((validation_result & RouteError::NO_ROUTE) == RouteError::NO_ROUTE) {
-        feature.set_field("no_way_members", "T");
-    }
-    if ((validation_result & RouteError::UNKNOWN_ROLE) == RouteError::UNKNOWN_ROLE) {
-        feature.set_field("unknown_role", "T");
-    }
-    if ((validation_result & RouteError::UNKNOWN_TYPE) == RouteError::UNKNOWN_TYPE) {
-        feature.set_field("unknown_route_type", "T");
-    }
-    if ((validation_result & RouteError::STOP_IS_NOT_NODE) == RouteError::STOP_IS_NOT_NODE) {
-        feature.set_field("stop_is_not_node", "T");
-    }
-    feature.add_to_layer();
-}
-
-void RouteManager::write_error_way(const osmium::Relation& relation, const osmium::object_id_type node_ref,
-        const char* error_text, const osmium::Way* way) {
-    try {
-        gdalcpp::Feature feature(m_ptv2_error_lines, m_factory.create_linestring(*way));
-        static char way_idbuffer[20];
-        sprintf(way_idbuffer, "%ld", way->id());
-        feature.set_field("way_id", way_idbuffer);
-        static char node_idbuffer[20];
-        sprintf(node_idbuffer, "%ld", node_ref);
-        feature.set_field("node_id", node_idbuffer);
-        static char rel_idbuffer[20];
-        sprintf(rel_idbuffer, "%ld", relation.id());
-        feature.set_field("rel_id", rel_idbuffer);
-        feature.set_field("name", relation.get_value_by_key("name"));
-        feature.set_field("ref", relation.get_value_by_key("ref"));
-        feature.set_field("from", relation.get_value_by_key("from"));
-        feature.set_field("to", relation.get_value_by_key("to"));
-        feature.set_field("via", relation.get_value_by_key("via"));
-        feature.set_field("route", relation.get_value_by_key("route"));
-        feature.set_field("name", relation.get_value_by_key("name"));
-        feature.set_field("error", error_text);
-        feature.add_to_layer();
-    } catch (osmium::geometry_error& err) {
-        m_verbose_output << err.what() << '\n';
-    }
-}
-
-void RouteManager::write_error_point(const osmium::Relation& relation, const osmium::NodeRef* node_ref,
-        const char* error_text, const osmium::object_id_type way_id) {
-    write_error_point(relation, node_ref->ref(), node_ref->location(), error_text, way_id);
-}
-
-void RouteManager::write_error_point(const osmium::Relation& relation, const osmium::object_id_type node_ref,
-        const osmium::Location& location, const char* error_text, const osmium::object_id_type way_id) {
-    gdalcpp::Feature feature(m_ptv2_error_points, m_factory.create_point(location));
-    static char way_idbuffer[20];
-    sprintf(way_idbuffer, "%ld", way_id);
-    feature.set_field("way_id", way_idbuffer);
-    static char node_idbuffer[20];
-    sprintf(node_idbuffer, "%ld", node_ref);
-    feature.set_field("node_id", node_idbuffer);
-    static char rel_idbuffer[20];
-    sprintf(rel_idbuffer, "%ld", relation.id());
-    feature.set_field("rel_id", rel_idbuffer);
-    feature.set_field("name", relation.get_value_by_key("name"));
-    feature.set_field("ref", relation.get_value_by_key("ref"));
-    feature.set_field("from", relation.get_value_by_key("from"));
-    feature.set_field("to", relation.get_value_by_key("to"));
-    feature.set_field("via", relation.get_value_by_key("via"));
-    feature.set_field("route", relation.get_value_by_key("route"));
-    feature.set_field("name", relation.get_value_by_key("name"));
-    feature.set_field("error", error_text);
-    feature.add_to_layer();
 }
