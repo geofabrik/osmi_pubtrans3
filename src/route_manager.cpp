@@ -121,7 +121,7 @@ bool RouteManager::is_ptv2(const osmium::Relation& relation) {
 RouteError RouteManager::is_valid(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
         std::vector<const char*>& roles) {
     RouteError result = RouteError::CLEAN;
-    result |= check_roles_order_and_type(relation, member_objects, roles);
+    result |= check_roles_order_and_type(relation);
     result |= find_gaps(relation, member_objects, roles);
     return result;
 }
@@ -146,8 +146,7 @@ RouteType RouteManager::get_route_type(const char* route) {
     return RouteType::NONE;
 }
 
-RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
-        std::vector<const char*>& roles) {
+RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& relation) {
     bool seen_road_member = false;
     bool seen_stop_platform = false;
     RouteError error = RouteError::CLEAN;
@@ -155,68 +154,79 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
     if (type == RouteType::NONE) {
         error |= RouteError::UNKNOWN_TYPE;
     }
-    for (size_t i = 0; i < member_objects.size(); ++i) {
-        if (!member_objects.at(i)) {
+    for (const osmium::RelationMember& member : relation.members()) {
+        const osmium::OSMObject* object = nullptr;
+        if (member.ref() != 0) {
+            object = this->get_member_object(member);
+        }
+        if (!object) {
             //TODO work with RelationMemberList class instead of std::vector<osmium::OSMObject*>
             continue;
         }
-        const char* role = roles.at(i);
-        if (member_objects.at(i)->type() == osmium::item_type::way && !strcmp(role, "")) {
+        if (member.type() == osmium::item_type::way && !strcmp(member.role(), "")) {
             seen_road_member = true;
             if (!seen_stop_platform) {
                 error |= RouteError::NO_STOPPLTF_AT_FRONT;
             }
-            if (member_objects.at(i)->type() != osmium::item_type::way) {
-                if (member_objects.at(i)->type() == osmium::item_type::node) {
-                    const osmium::Node* node = static_cast<const osmium::Node*>(member_objects.at(i));
+            if (member.type() != osmium::item_type::way) {
+                if (member.type() == osmium::item_type::node && object) {
+                    const osmium::Node* node = static_cast<const osmium::Node*>(object);
                     write_error_point(relation, node->id(), node->location(), "empty role for non-way object", 0);
                 }
                 error |= RouteError::EMPTY_ROLE_NON_WAY;
             }
-            error |= is_way_usable(relation, type, static_cast<const osmium::Way*>(member_objects.at(i)));
-        } else if (seen_road_member && (is_stop(role) || is_platform(role))) {
-            switch (member_objects.at(i)->type()) {
-            case osmium::item_type::node:
-                write_error_point(relation, static_cast<const osmium::Node*>(member_objects.at(i))->id(),
-                        static_cast<const osmium::Node*>(member_objects.at(i))->location(), "stop/platform after route", 0);
-                break;
-            case osmium::item_type::way:
-                write_error_way(relation, 0, "stop/platform after route",
-                        static_cast<const osmium::Way*>(member_objects.at(i)));
-                break;
-            default:
-                break;
+            if (object) {
+                error |= is_way_usable(relation, type, static_cast<const osmium::Way*>(object));
             }
+        } else if (seen_road_member && (is_stop(member.role()) || is_platform(member.role()))) {
             error |= RouteError::STOPPLTF_AFTER_ROUTE;
-        } else if (is_stop(role)) {
-            if (member_objects.at(i)->type() == osmium::item_type::node) {
-                seen_stop_platform = true;
-                // errors reported by check_stop_tags are not considered as severe
-                check_stop_tags(relation, static_cast<const osmium::Node*>(member_objects.at(i)), type);
-            } else if (member_objects.at(i)->type() == osmium::item_type::way) {
-                error |= RouteError::STOP_IS_NOT_NODE;
-                write_error_way(relation, 0, "stop is not a node", static_cast<const osmium::Way*>(member_objects.at(i)));
+            if (object) {
+                switch (member.type()) {
+                case osmium::item_type::node:
+                    write_error_point(relation, static_cast<const osmium::Node*>(object)->id(),
+                            static_cast<const osmium::Node*>(object)->location(), "stop/platform after route", 0);
+                    break;
+                case osmium::item_type::way:
+                    write_error_way(relation, 0, "stop/platform after route",
+                            static_cast<const osmium::Way*>(object));
+                    break;
+                default:
+                    break;
+                }
             }
-        } else if (is_platform(role)) {
+        } else if (member.type() == osmium::item_type::node && is_stop(member.role())) {
+            seen_stop_platform = true;
+            // errors reported by check_stop_tags are not considered as severe
+            if (object) {
+                check_stop_tags(relation, static_cast<const osmium::Node*>(object), type);
+            }
+        } else if (member.type() == osmium::item_type::way && is_stop(member.role())) {
+            error |= RouteError::STOP_IS_NOT_NODE;
+            if (object) {
+                write_error_way(relation, 0, "stop is not a node", static_cast<const osmium::Way*>(object));
+            }
+        } else if (is_platform(member.role())) {
             seen_stop_platform = true;
             // errors reported by check_platform_tags are not considered as severe
-            check_platform_tags(relation, type, member_objects.at(i));
-        } else if (strcmp(role, "") && !is_stop(role) && !is_platform(role)) {
+            if (object) {
+                check_platform_tags(relation, type, object);
+            }
+        } else if (strcmp(member.role(), "") && !is_stop(member.role()) && !is_platform(member.role())) {
             error |= RouteError::UNKNOWN_ROLE;
-            std::string error_msg = "unknown role '";
-            error_msg += role;
-            error_msg += "'";
-            switch (member_objects.at(i)->type()) {
-            case osmium::item_type::node:
-                write_error_point(relation, static_cast<const osmium::Node*>(member_objects.at(i))->id(),
-                        static_cast<const osmium::Node*>(member_objects.at(i))->location(), error_msg.c_str(), 0);
-                break;
-            case osmium::item_type::way:
-                write_error_way(relation, 0, error_msg.c_str(),
-                        static_cast<const osmium::Way*>(member_objects.at(i)));
-                break;
-            default:
-                break;
+            if (object) {
+                std::string error_msg = "unknown role '";
+                error_msg += member.role();
+                error_msg += "'";
+                switch (member.type()) {
+                case osmium::item_type::node:
+                    write_error_point(relation, member.ref(), static_cast<const osmium::Node*>(object)->location(), error_msg.c_str(), 0);
+                    break;
+                case osmium::item_type::way:
+                    write_error_way(relation, 0, error_msg.c_str(), static_cast<const osmium::Way*>(object));
+                    break;
+                default:
+                    break;
+                }
             }
         }
     }
@@ -224,16 +234,21 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
         // route contains no highway/railway members
         error |= RouteError::NO_ROUTE;
         // write all members as errors
-        for (std::vector<const osmium::OSMObject*>::const_iterator it = member_objects.cbegin(); it != member_objects.cend(); ++it) {
-            const osmium::OSMObject* obj = *it;
-            switch (obj->type()) {
-            case osmium::item_type::node:
-                write_error_point(relation, static_cast<const osmium::Node*>(*it)->id(),
-                        static_cast<const osmium::Node*>(*it)->location(), "route has only stops/platforms", 0);
+        for (const osmium::RelationMember& member : relation.members()) {
+            if (member.ref() == 0) {
+                continue;
+            }
+            switch (member.type()) {
+            case osmium::item_type::node: {
+                const osmium::Node* node = this->get_member_node(member.ref());
+                write_error_point(relation, node->id(), node->location(), "route has only stops/platforms", 0);
                 break;
-            case osmium::item_type::way:
-                write_error_way(relation, 0, "route has only stops/platforms", static_cast<const osmium::Way*>(*it));
+            }
+            case osmium::item_type::way: {
+                const osmium::Way* way = this->get_member_way(member.ref());
+                write_error_way(relation, 0, "route has only stops/platforms", way);
                 break;
+            }
             default:
                 break;
             }

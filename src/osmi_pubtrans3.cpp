@@ -146,6 +146,9 @@ int main(int argc, char* argv[]) {
         verbose_output << "Pass 2 ...";
         osmium::io::Reader reader1(input_filename);
         osmium::apply(reader1, location_handler, railway_handler1, tr_handler, route_manager.handler());
+        route_manager.for_each_incomplete_relation([&](const osmium::relations::RelationHandle& handle){
+            route_manager.process_route(*handle);
+        });
         verbose_output << " done\n";
 
         reader1.close();

@@ -70,8 +70,6 @@ class RouteManager : public osmium::relations::RelationsManager<RouteManager, tr
     gdalcpp::Layer m_ptv2_error_lines;
     gdalcpp::Layer m_ptv2_error_points;
 
-    void process_route(const osmium::Relation& relation);
-
     bool is_ptv2(const osmium::Relation& relation);
 
     RouteError is_valid(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
@@ -79,8 +77,7 @@ class RouteManager : public osmium::relations::RelationsManager<RouteManager, tr
 
     static RouteType get_route_type(const char* route);
 
-    RouteError check_roles_order_and_type(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
-            std::vector<const char*>& roles);
+    RouteError check_roles_order_and_type(const osmium::Relation& relation);
 
     static bool is_stop(const char* role);
 
@@ -129,6 +126,8 @@ public:
     bool new_relation(const osmium::Relation& relation) const noexcept;
 
     void complete_relation(const osmium::Relation& relation);
+
+    void process_route(const osmium::Relation& relation);
 
     static bool roundabout_connected_to_previous_way(const osmium::NodeRef* common_node, const osmium::Way* way);
 
