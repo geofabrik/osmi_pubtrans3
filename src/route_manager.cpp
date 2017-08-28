@@ -42,6 +42,11 @@ RouteManager::RouteManager(gdalcpp::Dataset& dataset, std::string& output_format
     m_ptv2_routes_invalid.add_field("no_stops_pltf_at_begin", OFTString, 1);
     m_ptv2_routes_invalid.add_field("stoppltf_after_route", OFTString, 1);
     m_ptv2_routes_invalid.add_field("non_way_empty_role", OFTString, 1);
+    m_ptv2_routes_invalid.add_field("stop_not_on_way", OFTString, 1);
+    m_ptv2_routes_invalid.add_field("no_way_members", OFTString, 1);
+    m_ptv2_routes_invalid.add_field("unknown_role", OFTString, 1);
+    m_ptv2_routes_invalid.add_field("unknown_route_type", OFTString, 1);
+    m_ptv2_routes_invalid.add_field("stop_is_not_node", OFTString, 1);
     m_ptv2_error_lines.add_field("rel_id", OFTString, 10);
     m_ptv2_error_lines.add_field("way_id", OFTString, 10);
     m_ptv2_error_lines.add_field("node_id", OFTString, 10);
@@ -147,13 +152,16 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
     bool seen_stop_platform = false;
     RouteError error = RouteError::CLEAN;
     RouteType type = get_route_type(relation.get_value_by_key("route"));
+    if (type == RouteType::NONE) {
+        error |= RouteError::UNKNOWN_TYPE;
+    }
     for (size_t i = 0; i < member_objects.size(); ++i) {
         if (!member_objects.at(i)) {
             //TODO work with RelationMemberList class instead of std::vector<osmium::OSMObject*>
             continue;
         }
         const char* role = roles.at(i);
-        if (!strcmp(role, "")) {
+        if (member_objects.at(i)->type() == osmium::item_type::way && !strcmp(role, "")) {
             seen_road_member = true;
             if (!seen_stop_platform) {
                 error |= RouteError::NO_STOPPLTF_AT_FRONT;
@@ -166,7 +174,7 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
                 error |= RouteError::EMPTY_ROLE_NON_WAY;
             }
             error |= is_way_usable(relation, type, static_cast<const osmium::Way*>(member_objects.at(i)));
-        } else if (seen_road_member && is_stop_or_platform(role)) {
+        } else if (seen_road_member && (is_stop(role) || is_platform(role))) {
             switch (member_objects.at(i)->type()) {
             case osmium::item_type::node:
                 write_error_point(relation, static_cast<const osmium::Node*>(member_objects.at(i))->id(),
@@ -180,19 +188,134 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
                 break;
             }
             error |= RouteError::STOPPLTF_AFTER_ROUTE;
-        } else if (is_stop_or_platform(role)) {
+        } else if (is_stop(role)) {
+            if (member_objects.at(i)->type() == osmium::item_type::node) {
+                seen_stop_platform = true;
+                // errors reported by check_stop_tags are not considered as severe
+                check_stop_tags(relation, static_cast<const osmium::Node*>(member_objects.at(i)), type);
+            } else if (member_objects.at(i)->type() == osmium::item_type::way) {
+                error |= RouteError::STOP_IS_NOT_NODE;
+                write_error_way(relation, 0, "stop is not a node", static_cast<const osmium::Way*>(member_objects.at(i)));
+            }
+        } else if (is_platform(role)) {
             seen_stop_platform = true;
+            // errors reported by check_platform_tags are not considered as severe
+            check_platform_tags(relation, type, member_objects.at(i));
+        } else if (strcmp(role, "") && !is_stop(role) && !is_platform(role)) {
+            error |= RouteError::UNKNOWN_ROLE;
+            std::string error_msg = "unknown role '";
+            error_msg += role;
+            error_msg += "'";
+            switch (member_objects.at(i)->type()) {
+            case osmium::item_type::node:
+                write_error_point(relation, static_cast<const osmium::Node*>(member_objects.at(i))->id(),
+                        static_cast<const osmium::Node*>(member_objects.at(i))->location(), error_msg.c_str(), 0);
+                break;
+            case osmium::item_type::way:
+                write_error_way(relation, 0, error_msg.c_str(),
+                        static_cast<const osmium::Way*>(member_objects.at(i)));
+                break;
+            default:
+                break;
+            }
         }
-        //TODO check for routes only consisting of stops and platforms
-        //TODO check for unknown roles
+    }
+    if (!seen_road_member) {
+        // route contains no highway/railway members
+        error |= RouteError::NO_ROUTE;
+        // write all members as errors
+        for (std::vector<const osmium::OSMObject*>::const_iterator it = member_objects.cbegin(); it != member_objects.cend(); ++it) {
+            const osmium::OSMObject* obj = *it;
+            switch (obj->type()) {
+            case osmium::item_type::node:
+                write_error_point(relation, static_cast<const osmium::Node*>(*it)->id(),
+                        static_cast<const osmium::Node*>(*it)->location(), "route has only stops/platforms", 0);
+                break;
+            case osmium::item_type::way:
+                write_error_way(relation, 0, "route has only stops/platforms", static_cast<const osmium::Way*>(*it));
+                break;
+            default:
+                break;
+            }
+        }
     }
     return error;
 }
 
-bool RouteManager::is_stop_or_platform(const char* role) {
-    return !strcmp(role, "stop") || !strcmp(role, "platform")
-            || !strcmp(role, "stop_entry_only") || !strcmp(role, "platform_entry_only")
-            || !strcmp(role, "stop_exit_only") || !strcmp(role, "platform_exit_only");
+bool RouteManager::is_stop(const char* role) {
+    return !strcmp(role, "stop") || !strcmp(role, "stop_entry_only") || !strcmp(role, "stop_exit_only");
+}
+
+bool RouteManager::is_platform(const char* role) {
+    return !strcmp(role, "platform") || !strcmp(role, "platform_entry_only") || !strcmp(role, "platform_exit_only");
+}
+
+RouteError RouteManager::check_stop_tags(const osmium::Relation& relation, const osmium::Node* node, RouteType type) {
+    if (node->tags().has_tag("public_transport", "stop_position") && vehicle_tags_matches_route_type(node->tags(), type)) {
+        return RouteError::CLEAN;
+    }
+    if ((type == RouteType::BUS || type == RouteType::TROLLEYBUS) && !node->tags().has_tag("highway", "bus_stop")) {
+        write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
+        return RouteError::STOP_TAG_MISSING;
+    }
+    if (type == RouteType::TRAIN && !node->tags().has_tag("railway", "station")
+            && !node->tags().has_tag("railway", "halt") && !node->tags().has_tag("railway", "tram_stop")) {
+        write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
+        return RouteError::STOP_TAG_MISSING;
+    }
+    if (type == RouteType::SUBWAY && !node->tags().has_tag("railway", "station")) {
+        write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
+        return RouteError::STOP_TAG_MISSING;
+    }
+    if (type == RouteType::FERRY && !node->tags().has_tag("amenity", "ferry_terminal")) {
+        write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
+        return RouteError::STOP_TAG_MISSING;
+    }
+    if (type == RouteType::AERIALWAY && !node->tags().has_tag("aerialway", "station")) {
+        write_error_point(relation, node->id(), node->location(), "stop without proper tags", 0);
+        return RouteError::STOP_TAG_MISSING;
+    }
+    return RouteError::CLEAN;
+}
+
+bool RouteManager::vehicle_tags_matches_route_type(const osmium::TagList& tags, RouteType type) {
+    switch (type) {
+    case RouteType::BUS:
+        return tags.has_tag("bus", "yes");
+    case RouteType::TROLLEYBUS:
+        return tags.has_tag("trolleybus", "yes");
+    case RouteType::TRAIN:
+        return tags.has_tag("train", "yes");
+    case RouteType::TRAM:
+        return tags.has_tag("tram", "yes");
+    case RouteType::SUBWAY:
+        return tags.has_tag("subway", "yes");
+    case RouteType::FERRY:
+        return tags.has_tag("ferry", "yes");
+    case RouteType::AERIALWAY:
+        return tags.has_tag("aerialway", "yes");
+    default:
+        return false;
+    }
+}
+
+RouteError RouteManager::check_platform_tags(const osmium::Relation& relation, const RouteType type, const osmium::OSMObject* object) {
+    if (object->tags().has_tag("public_transport", "platform")) {
+        return RouteError::CLEAN;
+    }
+    if (((type == RouteType::BUS || type == RouteType::TROLLEYBUS)
+            && !object->tags().has_tag("highway", "bus_stop") && !object->tags().has_tag("highway", "platform"))
+            || ((type == RouteType::TRAIN || type == RouteType::TRAM || type == RouteType::SUBWAY)
+            && !object->tags().has_tag("railway", "platform"))) {
+        if (object->type() == osmium::item_type::node) {
+            const osmium::Node* node = static_cast<const osmium::Node*>(object);
+            write_error_point(relation, node->id(), node->location(), "platform without proper tags", 0);
+        } else if (object->type() == osmium::item_type::way) {
+            write_error_way(relation, 0, "platform without proper tags", static_cast<const osmium::Way*>(object));
+        }
+        return RouteError::PLTF_TAG_MISSING;
+    }
+    return RouteError::CLEAN;
 }
 
 RouteError RouteManager::is_way_usable(const osmium::Relation& relation, RouteType type, const osmium::Way* way) {
@@ -504,6 +627,21 @@ void RouteManager::write_invalid_route(const osmium::Relation& relation, std::ve
     }
     if ((validation_result & RouteError::STOPPLTF_AFTER_ROUTE) == RouteError::STOPPLTF_AFTER_ROUTE) {
         feature.set_field("stoppltf_after_route", "T");
+    }
+    if ((validation_result & RouteError::STOP_NOT_ON_WAY) == RouteError::STOP_NOT_ON_WAY) {
+        feature.set_field("stop_not_on_way", "T");
+    }
+    if ((validation_result & RouteError::NO_ROUTE) == RouteError::NO_ROUTE) {
+        feature.set_field("no_way_members", "T");
+    }
+    if ((validation_result & RouteError::UNKNOWN_ROLE) == RouteError::UNKNOWN_ROLE) {
+        feature.set_field("unknown_role", "T");
+    }
+    if ((validation_result & RouteError::UNKNOWN_TYPE) == RouteError::UNKNOWN_TYPE) {
+        feature.set_field("unknown_route_type", "T");
+    }
+    if ((validation_result & RouteError::STOP_IS_NOT_NODE) == RouteError::STOP_IS_NOT_NODE) {
+        feature.set_field("stop_is_not_node", "T");
     }
     feature.add_to_layer();
 }

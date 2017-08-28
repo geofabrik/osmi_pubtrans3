@@ -47,7 +47,12 @@ enum class RouteError : size_t {
     EMPTY_ROLE_NON_WAY = 64,
     STOPPLTF_AFTER_ROUTE = 128,
     STOP_NOT_ON_WAY = 256,
-    NO_ROUTE = 512
+    NO_ROUTE = 512,
+    UNKNOWN_ROLE = 1024,
+    UNKNOWN_TYPE = 2048,
+    STOP_TAG_MISSING = 4096,
+    PLTF_TAG_MISSING = 8192,
+    STOP_IS_NOT_NODE = 16384
 };
 
 inline RouteError& operator|= (RouteError& a, const RouteError& b) {
@@ -77,7 +82,15 @@ class RouteManager : public osmium::relations::RelationsManager<RouteManager, tr
     RouteError check_roles_order_and_type(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
             std::vector<const char*>& roles);
 
-    static bool is_stop_or_platform(const char* role);
+    static bool is_stop(const char* role);
+
+    static bool is_platform(const char* role);
+
+    RouteError check_stop_tags(const osmium::Relation& relation, const osmium::Node* node, RouteType type);
+
+    static bool vehicle_tags_matches_route_type(const osmium::TagList& tags, RouteType type);
+
+    RouteError check_platform_tags(const osmium::Relation& relation, const RouteType type, const osmium::OSMObject* object);
 
     RouteError is_way_usable(const osmium::Relation& relation, RouteType type, const osmium::Way* way);
 
