@@ -26,7 +26,7 @@ bool RouteManager::new_relation(const osmium::Relation& relation) const noexcept
     if (!strcmp(route, "train") || !strcmp(route, "light_rail") || !strcmp(route, "subway")
             || !strcmp(route, "tram") || !strcmp(route, "bus") || !strcmp(route, "ferry")
             || !strcmp(route, "trolleybus") || !strcmp(route, "share_taxi")) {
-        return true;
+        return is_ptv2(relation);
     }
     return false;
 }
@@ -51,15 +51,10 @@ void RouteManager::process_route(const osmium::Relation& relation) {
             return;
         }
         m_writer.write_invalid_route(relation, member_objects, roles, validation_result);
-    } else {
-        // We try validation for non-PTv2 routes against PTv2 rules because some
-        // are not tagged as PTv2 routes but are PTv2.
-        is_valid(relation, member_objects, roles);
-
     }
 }
 
-bool RouteManager::is_ptv2(const osmium::Relation& relation) {
+bool RouteManager::is_ptv2(const osmium::Relation& relation) const noexcept {
     // check if it is a PTv2 route
     const char* ptv2 = relation.get_value_by_key("public_transport:version");
     if (!ptv2 || strcmp(ptv2, "2")) {
