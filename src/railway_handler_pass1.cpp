@@ -31,7 +31,8 @@ void RailwayHandlerPass1::node(const osmium::Node& node) {
             (!strcmp(railway, "signal") || !strcmp(railway, "stop")
              || !strcmp(railway, "buffer_stop") || !strcmp(railway, "level_crossing")
              || !strcmp(railway, "milestone") || !strcmp(railway, "derail")
-             || !strcmp(railway, "isolated_track_section"))) {
+             || !strcmp(railway, "isolated_track_section") || !strcmp(railway, "switch")
+             || !strcmp(railway, "railway_crossing"))) {
         m_must_on_track_handles.emplace(node.id(), m_must_on_track.add_item(node));
     }
     if (railway && (!strcmp(railway, "level_crossing") || !strcmp(railway, "crossing"))) {
