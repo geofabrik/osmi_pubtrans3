@@ -12,6 +12,17 @@
 
 #include "ogr_output_base.hpp"
 
+enum class RouteType : char {
+    NONE,
+    BUS,
+    TROLLEYBUS,
+    AERIALWAY,
+    FERRY,
+    TRAIN,
+    TRAM,
+    SUBWAY
+};
+
 enum class RouteError : size_t {
     CLEAN = 0,
     OVER_NON_RAIL = 1,

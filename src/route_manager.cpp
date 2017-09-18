@@ -12,7 +12,8 @@
 
 RouteManager::RouteManager(gdalcpp::Dataset& dataset, std::string& output_format,
     osmium::util::VerboseOutput& verbose_output, int epsg /*= 3857*/) :
-        m_writer(dataset, output_format, verbose_output, epsg) { }
+        m_writer(dataset, output_format, verbose_output, epsg),
+        m_checker(m_writer) { }
 
 bool RouteManager::new_relation(const osmium::Relation& relation) const noexcept {
     const char* type = relation.get_value_by_key("type");
@@ -71,32 +72,12 @@ RouteError RouteManager::is_valid(const osmium::Relation& relation, std::vector<
     return result;
 }
 
-RouteType RouteManager::get_route_type(const char* route) {
-    assert(route);
-    if (!strcmp(route, "train")) {
-        return RouteType::TRAIN;
-    } else if (!strcmp(route, "subway")) {
-        return RouteType::SUBWAY;
-    } else if (!strcmp(route, "tram")) {
-        return RouteType::TRAM;
-    } else if (!strcmp(route, "bus")) {
-        return RouteType::BUS;
-    } else if (!strcmp(route, "trolleybus")) {
-        return RouteType::TROLLEYBUS;
-    } else if (!strcmp(route, "ferry")) {
-        return RouteType::FERRY;
-    } else if (!strcmp(route, "aerialway")) {
-        return RouteType::AERIALWAY;
-    }
-    return RouteType::NONE;
-}
-
 RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& relation) {
     bool seen_road_member = false;
     bool seen_stop_platform = false;
     bool incomplete = false;
     RouteError error = RouteError::CLEAN;
-    RouteType type = get_route_type(relation.get_value_by_key("route"));
+    RouteType type = m_checker.get_route_type(relation.get_value_by_key("route"));
     if (type == RouteType::NONE) {
         error |= RouteError::UNKNOWN_TYPE;
     }
@@ -123,7 +104,7 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
             if (object) {
                 error |= is_way_usable(relation, type, static_cast<const osmium::Way*>(object));
             }
-        } else if (seen_road_member && (is_stop(member.role()) || is_platform(member.role()))) {
+        } else if (seen_road_member && (m_checker.is_stop(member.role()) || m_checker.is_platform(member.role()))) {
             error |= RouteError::STOPPLTF_AFTER_ROUTE;
             if (object) {
                 switch (member.type()) {
@@ -139,24 +120,24 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
                     break;
                 }
             }
-        } else if (member.type() == osmium::item_type::node && is_stop(member.role())) {
+        } else if (member.type() == osmium::item_type::node && m_checker.is_stop(member.role())) {
             seen_stop_platform = true;
             // errors reported by check_stop_tags are not considered as severe
             if (object) {
                 check_stop_tags(relation, static_cast<const osmium::Node*>(object), type);
             }
-        } else if (member.type() == osmium::item_type::way && is_stop(member.role())) {
+        } else if (member.type() == osmium::item_type::way && m_checker.is_stop(member.role())) {
             error |= RouteError::STOP_IS_NOT_NODE;
             if (object) {
                 m_writer.write_error_way(relation, 0, "stop is not a node", static_cast<const osmium::Way*>(object));
             }
-        } else if (is_platform(member.role())) {
+        } else if (m_checker.is_platform(member.role())) {
             seen_stop_platform = true;
             // errors reported by check_platform_tags are not considered as severe
             if (object) {
                 check_platform_tags(relation, type, object);
             }
-        } else if (strcmp(member.role(), "") && !is_stop(member.role()) && !is_platform(member.role())) {
+        } else if (strcmp(member.role(), "") && !m_checker.is_stop(member.role()) && !m_checker.is_platform(member.role())) {
             error |= RouteError::UNKNOWN_ROLE;
             if (object) {
                 std::string error_msg = "unknown role '";
@@ -202,16 +183,8 @@ RouteError RouteManager::check_roles_order_and_type(const osmium::Relation& rela
     return error;
 }
 
-bool RouteManager::is_stop(const char* role) {
-    return !strcmp(role, "stop") || !strcmp(role, "stop_entry_only") || !strcmp(role, "stop_exit_only");
-}
-
-bool RouteManager::is_platform(const char* role) {
-    return !strcmp(role, "platform") || !strcmp(role, "platform_entry_only") || !strcmp(role, "platform_exit_only");
-}
-
 RouteError RouteManager::check_stop_tags(const osmium::Relation& relation, const osmium::Node* node, RouteType type) {
-    if (node->tags().has_tag("public_transport", "stop_position") && vehicle_tags_matches_route_type(node->tags(), type)) {
+    if (node->tags().has_tag("public_transport", "stop_position") && m_checker.vehicle_tags_matches_route_type(node->tags(), type)) {
         return RouteError::CLEAN;
     }
     if ((type == RouteType::BUS || type == RouteType::TROLLEYBUS) && !node->tags().has_tag("highway", "bus_stop")) {
@@ -238,27 +211,6 @@ RouteError RouteManager::check_stop_tags(const osmium::Relation& relation, const
     return RouteError::CLEAN;
 }
 
-bool RouteManager::vehicle_tags_matches_route_type(const osmium::TagList& tags, RouteType type) {
-    switch (type) {
-    case RouteType::BUS:
-        return tags.has_tag("bus", "yes");
-    case RouteType::TROLLEYBUS:
-        return tags.has_tag("trolleybus", "yes");
-    case RouteType::TRAIN:
-        return tags.has_tag("train", "yes");
-    case RouteType::TRAM:
-        return tags.has_tag("tram", "yes");
-    case RouteType::SUBWAY:
-        return tags.has_tag("subway", "yes");
-    case RouteType::FERRY:
-        return tags.has_tag("ferry", "yes");
-    case RouteType::AERIALWAY:
-        return tags.has_tag("aerialway", "yes");
-    default:
-        return false;
-    }
-}
-
 RouteError RouteManager::check_platform_tags(const osmium::Relation& relation, const RouteType type, const osmium::OSMObject* object) {
     if (object->tags().has_tag("public_transport", "platform")) {
         return RouteError::CLEAN;
@@ -283,20 +235,20 @@ RouteError RouteManager::is_way_usable(const osmium::Relation& relation, RouteTy
     case RouteType::TRAIN:
     case RouteType::TRAM:
     case RouteType::SUBWAY:
-        if (!check_valid_railway_track(type, way->tags())) {
+        if (!m_checker.check_valid_railway_track(type, way->tags())) {
             m_writer.write_error_way(relation, 0, "rail-guided route over non-rail", way);
             return RouteError::OVER_NON_RAIL;
         }
         break;
 
     case RouteType::BUS:
-        if (!check_valid_road_way(way->tags())) {
+        if (!m_checker.check_valid_road_way(way->tags())) {
             m_writer.write_error_way(relation, 0, "road vehicle route over non-road", way);
             return RouteError::OVER_NON_ROAD;
         }
         break;
     case RouteType::TROLLEYBUS:
-        if (!check_valid_trolleybus_way(way->tags())) {
+        if (!m_checker.check_valid_trolleybus_way(way->tags())) {
             m_writer.write_error_way(relation, 0, "trolley bus without trolley wire", way);
             return RouteError::NO_TROLLEY_WIRE;
         }
@@ -305,52 +257,6 @@ RouteError RouteManager::is_way_usable(const osmium::Relation& relation, RouteTy
         return RouteError::CLEAN;
     }
     return RouteError::CLEAN;
-}
-
-bool RouteManager::check_valid_railway_track(RouteType type, const osmium::TagList& member_tags) {
-    const char* railway = member_tags.get_value_by_key("railway");
-    if (!railway) {
-        return is_ferry(member_tags);
-    }
-    if (type == RouteType::TRAIN || type == RouteType::TRAM) {
-        if (!strcmp(railway, "rail") || !strcmp(railway, "light_rail") || !strcmp(railway, "tram") || !strcmp(railway, "subway")
-                || !strcmp(railway, "funicular") || !strcmp(railway, "miniature")) {
-            return true;
-        }
-    }
-    if (type == RouteType::SUBWAY) {
-            return true;
-    }
-    return is_ferry(member_tags);
-}
-
-bool RouteManager::check_valid_road_way(const osmium::TagList& member_tags) {
-    const char* highway = member_tags.get_value_by_key("highway");
-    if (!highway) {
-        return is_ferry(member_tags);
-    }
-    return (!strcmp(highway, "motorway") || !strcmp(highway, "motorway_link") || !strcmp(highway, "trunk")
-        || !strcmp(highway, "trunk_link") || !strcmp(highway, "primary") || !strcmp(highway, "primary_link")
-        || !strcmp(highway, "secondary") || !strcmp(highway, "secondary_link") || !strcmp(highway, "tertiary")
-        || !strcmp(highway, "tertiary_link") || !strcmp(highway, "unclassified") || !strcmp(highway, "residential")
-        || !strcmp(highway, "service") || !strcmp(highway, "track"));
-}
-
-bool RouteManager::check_valid_trolleybus_way(const osmium::TagList& member_tags) {
-    if (member_tags.has_tag("trolley_wire", "yes")) {
-        return check_valid_road_way(member_tags);
-    }
-    //TODO check direction (forward wire but using the way in opposite direction might cause problems ;-)
-    if (member_tags.has_tag("trolley_wire:forward", "yes") || member_tags.has_tag("trolley_wire", "forward")) {
-        return check_valid_road_way(member_tags);
-    }
-    return (member_tags.has_tag("trolley_wire:backward", "yes") || member_tags.has_tag("trolley_wire", "backward"))
-            && check_valid_road_way(member_tags);
-}
-
-bool RouteManager::is_ferry(const osmium::TagList& member_tags) {
-    const char* route = member_tags.get_value_by_key("route");
-    return (route && !strcmp(route, "ferry"));
 }
 
 RouteError RouteManager::find_gaps(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
@@ -419,7 +325,7 @@ RouteError RouteManager::find_gaps(const osmium::Relation& relation, std::vector
         assert(member_objects.at(i - 1));
         const osmium::Way* previous_way = static_cast<const osmium::Way*>(member_objects.at(i - 1));
         if (status == MemberStatus::AFTER_ROUNDABOUT) {
-            next_node = roundabout_connected_to_next_way(previous_way, way);
+            next_node = m_checker.roundabout_connected_to_next_way(previous_way, way);
             if (next_node == nullptr) {
                 m_writer.write_error_way(relation, 0, "gap", way);
                 status = MemberStatus::AFTER_GAP;
@@ -429,14 +335,14 @@ RouteError RouteManager::find_gaps(const osmium::Relation& relation, std::vector
             }
         } else if (status == MemberStatus::ROUNDABOUT) {
             // check if any of the nodes of the roundabout matches the beginning or end node
-            if (!roundabout_connected_to_previous_way(next_node, way)) {
+            if (!m_checker.roundabout_connected_to_previous_way(next_node, way)) {
                 m_writer.write_error_way(relation, 0, "gap", way);
                 m_writer.write_error_point(relation, next_node, "gap at this location", way->id());
                 result |= RouteError::UNORDERED_GAP;
             }
             status = MemberStatus::AFTER_ROUNDABOUT;
         } else if (status == MemberStatus::SECOND_ROUNDABOUT) {
-            if (!roundabout_as_second_after_gap(previous_way, way)) {
+            if (!m_checker.roundabout_as_second_after_gap(previous_way, way)) {
                 m_writer.write_error_way(relation, 0, "gap", way);
                 result |= RouteError::UNORDERED_GAP;
             }
@@ -471,33 +377,4 @@ RouteError RouteManager::find_gaps(const osmium::Relation& relation, std::vector
         }
     }
     return result;
-}
-
-bool RouteManager::roundabout_connected_to_previous_way(const osmium::NodeRef* common_node, const osmium::Way* way) {
-    for (const osmium::NodeRef& nd_ref : way->nodes()) {
-        if (common_node->ref() == nd_ref.ref()) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool RouteManager::roundabout_as_second_after_gap(const osmium::Way* previous_way, const osmium::Way* way) {
-    for (const osmium::NodeRef& nd_ref : way->nodes()) {
-        if (previous_way->nodes().front().ref() == nd_ref.ref() || previous_way->nodes().back().ref() == nd_ref.ref()) {
-            return true;
-        }
-    }
-    return false;
-}
-
-const osmium::NodeRef* RouteManager::roundabout_connected_to_next_way(const osmium::Way* previous_way, const osmium::Way* way) {
-    for (const osmium::NodeRef& nd_ref : previous_way->nodes()) {
-        if (way->nodes().front().ref() == nd_ref.ref()) {
-            return &(way->nodes().back());
-        } else if (way->nodes().back().ref() == nd_ref.ref()) {
-            return &(way->nodes().front());
-        }
-    }
-    return nullptr;
 }

@@ -9,18 +9,7 @@
 #define SRC_ROUTE_COLLECTOR_HPP_
 
 #include <osmium/relations/relations_manager.hpp>
-#include "route_writer.hpp"
-
-enum class RouteType : char {
-    NONE,
-    BUS,
-    TROLLEYBUS,
-    AERIALWAY,
-    FERRY,
-    TRAIN,
-    TRAM,
-    SUBWAY
-};
+#include "ptv2_checker.hpp"
 
 enum class MemberStatus : char {
     BEFORE_FIRST = 0,
@@ -38,35 +27,20 @@ enum class MemberStatus : char {
 
 class RouteManager : public osmium::relations::RelationsManager<RouteManager, true, true, true, false> {
     RouteWriter m_writer;
+    PTv2Checker m_checker;
 
     bool is_ptv2(const osmium::Relation& relation) const noexcept;
 
     RouteError is_valid(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
             std::vector<const char*>& roles);
 
-    static RouteType get_route_type(const char* route);
-
     RouteError check_roles_order_and_type(const osmium::Relation& relation);
 
-    static bool is_stop(const char* role);
-
-    static bool is_platform(const char* role);
-
     RouteError check_stop_tags(const osmium::Relation& relation, const osmium::Node* node, RouteType type);
-
-    static bool vehicle_tags_matches_route_type(const osmium::TagList& tags, RouteType type);
 
     RouteError check_platform_tags(const osmium::Relation& relation, const RouteType type, const osmium::OSMObject* object);
 
     RouteError is_way_usable(const osmium::Relation& relation, RouteType type, const osmium::Way* way);
-
-    static bool check_valid_railway_track(RouteType type, const osmium::TagList& member_tags);
-
-    static bool check_valid_road_way(const osmium::TagList& member_tags);
-
-    static bool check_valid_trolleybus_way(const osmium::TagList& member_tags);
-
-    static bool is_ferry(const osmium::TagList& member_tags);
 
     RouteError find_gaps(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
             std::vector<const char*>& roles);
@@ -82,12 +56,6 @@ public:
     void complete_relation(const osmium::Relation& relation);
 
     void process_route(const osmium::Relation& relation);
-
-    static bool roundabout_connected_to_previous_way(const osmium::NodeRef* common_node, const osmium::Way* way);
-
-    static bool roundabout_as_second_after_gap(const osmium::Way* previous_way, const osmium::Way* way);
-
-    static const osmium::NodeRef* roundabout_connected_to_next_way(const osmium::Way* previous_way, const osmium::Way* way);
 };
 
 
