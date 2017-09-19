@@ -22,3 +22,10 @@ target_link_libraries(test_role_order_check testlib ${Boost_LIBRARIES} ${GDAL_LI
 add_test(NAME test_role_order_check
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND test_role_order_check)
+
+add_executable(test_gap_detection t/test_gap_detection.cpp ../src/ptv2_checker.cpp ../src/route_writer.cpp ../src/ogr_output_base.cpp)
+target_compile_options(test_gap_detection PUBLIC "-DTEST_NO_ERROR_WRITING")
+target_link_libraries(test_gap_detection testlib ${Boost_LIBRARIES} ${GDAL_LIBRARY} ${PROJ_LIBRARY})
+add_test(NAME test_gap_detection
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND test_gap_detection)
