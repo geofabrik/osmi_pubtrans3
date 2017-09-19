@@ -174,6 +174,7 @@ void RouteWriter::write_invalid_route(const osmium::Relation& relation, std::vec
 
 void RouteWriter::write_error_way(const osmium::Relation& relation, const osmium::object_id_type node_ref,
         const char* error_text, const osmium::Way* way) {
+#ifndef TEST_NO_ERROR_WRITING
     try {
         gdalcpp::Feature feature(m_ptv2_error_lines, m_factory.create_linestring(*way));
         static char way_idbuffer[20];
@@ -197,6 +198,7 @@ void RouteWriter::write_error_way(const osmium::Relation& relation, const osmium
     } catch (osmium::geometry_error& err) {
         m_verbose_output << err.what() << '\n';
     }
+#endif
 }
 
 void RouteWriter::write_error_point(const osmium::Relation& relation, const osmium::NodeRef* node_ref,
@@ -206,6 +208,7 @@ void RouteWriter::write_error_point(const osmium::Relation& relation, const osmi
 
 void RouteWriter::write_error_point(const osmium::Relation& relation, const osmium::object_id_type node_ref,
         const osmium::Location& location, const char* error_text, const osmium::object_id_type way_id) {
+#ifndef TEST_NO_ERROR_WRITING
     gdalcpp::Feature feature(m_ptv2_error_points, m_factory.create_point(location));
     static char way_idbuffer[20];
     sprintf(way_idbuffer, "%ld", way_id);
@@ -225,6 +228,7 @@ void RouteWriter::write_error_point(const osmium::Relation& relation, const osmi
     feature.set_field("name", relation.get_value_by_key("name"));
     feature.set_field("error", error_text);
     feature.add_to_layer();
+#endif
 }
 
 void RouteWriter::write_error_object(const osmium::Relation& relation, const osmium::OSMObject* object,

@@ -143,3 +143,11 @@ endif(CPPCHECK)
 add_definitions(${OSMIUM_WARNING_OPTIONS})
 
 add_subdirectory(src)
+
+#-----------------------------------------------------------------------------
+#
+#  Unit and data tests
+#
+#-----------------------------------------------------------------------------
+enable_testing()
+add_subdirectory(test)

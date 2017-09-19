@@ -34,14 +34,6 @@ class RouteManager : public osmium::relations::RelationsManager<RouteManager, tr
     RouteError is_valid(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
             std::vector<const char*>& roles);
 
-    RouteError check_roles_order_and_type(const osmium::Relation& relation);
-
-    RouteError check_stop_tags(const osmium::Relation& relation, const osmium::Node* node, RouteType type);
-
-    RouteError check_platform_tags(const osmium::Relation& relation, const RouteType type, const osmium::OSMObject* object);
-
-    RouteError is_way_usable(const osmium::Relation& relation, RouteType type, const osmium::Way* way);
-
     RouteError find_gaps(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
             std::vector<const char*>& roles);
 

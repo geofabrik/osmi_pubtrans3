@@ -13,6 +13,13 @@
 class PTv2Checker {
     RouteWriter& m_writer;
 
+    RouteError role_check_handle_road_member(const osmium::Relation& relation, const RouteType type,
+            const osmium::OSMObject* object, const bool seen_stop_platform);
+
+    RouteError handle_errorneous_stop_platform(const osmium::Relation& relation, const osmium::OSMObject* object);
+
+    RouteError handle_unknown_role(const osmium::Relation& relation, const osmium::OSMObject* object, const char* role);
+
 public:
     PTv2Checker() = delete;
 
@@ -39,6 +46,17 @@ public:
     bool roundabout_as_second_after_gap(const osmium::Way* previous_way, const osmium::Way* way);
 
     const osmium::NodeRef* roundabout_connected_to_next_way(const osmium::Way* previous_way, const osmium::Way* way);
+
+    RouteError is_way_usable(const osmium::Relation& relation, RouteType type, const osmium::Way* way);
+
+    RouteError check_stop_tags(const osmium::Relation& relation, const osmium::Node* node, RouteType type);
+
+    RouteError check_platform_tags(const osmium::Relation& relation, const RouteType type, const osmium::OSMObject* object);
+
+    /*
+     * Check the correct order of the members of the relation without looking on their geometry.
+     */
+    RouteError check_roles_order_and_type(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects);
 };
 
 
