@@ -98,6 +98,30 @@ namespace test_utils {
         return relation_builder.object();
     }
 
+    std::map<std::string, std::string> get_bus_route_tags() {
+        std::map<std::string, std::string> bus_route_tags;
+        bus_route_tags.emplace("type", "route");
+        bus_route_tags.emplace("route", "bus");
+        bus_route_tags.emplace("public_transport:version", "2");
+        return bus_route_tags;
+    }
+
+    std::map<std::string, std::string> get_train_route_tags() {
+        std::map<std::string, std::string> train_route_tags;
+        train_route_tags.emplace("type", "route");
+        train_route_tags.emplace("route", "train");
+        train_route_tags.emplace("public_transport:version", "2");
+        return train_route_tags;
+    }
+
+    std::map<std::string, std::string> get_light_rail_route_tags() {
+        std::map<std::string, std::string> train_route_tags;
+        train_route_tags.emplace("type", "route");
+        train_route_tags.emplace("route", "light_rail");
+        train_route_tags.emplace("public_transport:version", "2");
+        return train_route_tags;
+    }
+
 }
 
 

@@ -345,11 +345,11 @@ RouteError PTv2Checker::handle_unknown_role(const osmium::Relation& relation, co
     return error;
 }
 
-RouteError PTv2Checker::find_gaps(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
+int PTv2Checker::find_gaps(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
         std::vector<const char*>& roles) {
     MemberStatus status = MemberStatus::BEFORE_FIRST;
     const osmium::NodeRef* next_node;
-    RouteError result = RouteError::CLEAN;
+    int gaps_count = 0;
     for (size_t i = 0; i < relation.members().size(); ++i) {
         const osmium::OSMObject* member = member_objects.at(i);
         const char* role = roles.at(i);
@@ -385,7 +385,7 @@ RouteError PTv2Checker::find_gaps(const osmium::Relation& relation, std::vector<
             if (status == MemberStatus::AFTER_ROUNDABOUT) {
                 // roundabout after another roundabout, this is an impossible geometry and shoud be fixed
                 m_writer.write_error_way(relation, 0, "roundabout after roundabout", way);
-                result |= RouteError::UNORDERED_GAP;
+                ++gaps_count;
                 continue;
             }
             if (status == MemberStatus::FIRST || status == MemberStatus::AFTER_GAP) {
@@ -415,7 +415,7 @@ RouteError PTv2Checker::find_gaps(const osmium::Relation& relation, std::vector<
             if (next_node == nullptr) {
                 m_writer.write_error_way(relation, 0, "gap", way);
                 status = MemberStatus::AFTER_GAP;
-                result |= RouteError::UNORDERED_GAP;
+                ++gaps_count;
             } else {
                 status = MemberStatus::NORMAL;
             }
@@ -424,13 +424,13 @@ RouteError PTv2Checker::find_gaps(const osmium::Relation& relation, std::vector<
             if (!roundabout_connected_to_previous_way(next_node, way)) {
                 m_writer.write_error_way(relation, 0, "gap", way);
                 m_writer.write_error_point(relation, next_node, "gap at this location", way->id());
-                result |= RouteError::UNORDERED_GAP;
+                ++gaps_count;
             }
             status = MemberStatus::AFTER_ROUNDABOUT;
         } else if (status == MemberStatus::SECOND_ROUNDABOUT) {
             if (!roundabout_as_second_after_gap(previous_way, way)) {
                 m_writer.write_error_way(relation, 0, "gap", way);
-                result |= RouteError::UNORDERED_GAP;
+                ++gaps_count;
             }
             status = MemberStatus::AFTER_ROUNDABOUT;
         }
@@ -447,7 +447,7 @@ RouteError PTv2Checker::find_gaps(const osmium::Relation& relation, std::vector<
             } else {
                 m_writer.write_error_way(relation, 0, "gap", previous_way);
                 status = MemberStatus::AFTER_GAP;
-                result |= RouteError::UNORDERED_GAP;
+                ++gaps_count;
             }
         } else if (status == MemberStatus::NORMAL) {
             if (way->nodes().front().ref() == next_node->ref()) {
@@ -457,10 +457,10 @@ RouteError PTv2Checker::find_gaps(const osmium::Relation& relation, std::vector<
             } else {
                 m_writer.write_error_way(relation, next_node->ref(), "gap", previous_way);
                 m_writer.write_error_point(relation, next_node, "gap at this location", way->id());
-                result |= RouteError::UNORDERED_GAP;
+                ++gaps_count;
                 status = MemberStatus::SECOND;
             }
         }
     }
-    return result;
+    return gaps_count;
 }

@@ -68,6 +68,8 @@ RouteError RouteManager::is_valid(const osmium::Relation& relation, std::vector<
         std::vector<const char*>& roles) {
     RouteError result = RouteError::CLEAN;
     result |= m_checker.check_roles_order_and_type(relation, member_objects);
-    result |= m_checker.find_gaps(relation, member_objects, roles);
+    if (m_checker.find_gaps(relation, member_objects, roles) > 0) {
+        result |= RouteError::UNORDERED_GAP;
+    }
     return result;
 }

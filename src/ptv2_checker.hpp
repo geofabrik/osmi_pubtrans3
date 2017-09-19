@@ -72,7 +72,7 @@ public:
      */
     RouteError check_roles_order_and_type(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects);
 
-    RouteError find_gaps(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
+    int find_gaps(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
             std::vector<const char*>& roles);
 };
 
