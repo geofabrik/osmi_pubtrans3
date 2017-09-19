@@ -27,32 +27,6 @@ static osmium::item_type RELATION = osmium::item_type::relation;
 
 
 
-std::map<std::string, std::string> get_bus_route_tags() {
-    std::map<std::string, std::string> bus_route_tags;
-    bus_route_tags.emplace("type", "route");
-    bus_route_tags.emplace("route", "bus");
-    bus_route_tags.emplace("public_transport:version", "2");
-    return bus_route_tags;
-}
-
-std::map<std::string, std::string> get_train_route_tags() {
-    std::map<std::string, std::string> train_route_tags;
-    train_route_tags.emplace("type", "route");
-    train_route_tags.emplace("route", "train");
-    train_route_tags.emplace("public_transport:version", "2");
-    return train_route_tags;
-}
-
-std::map<std::string, std::string> get_light_rail_route_tags() {
-    std::map<std::string, std::string> train_route_tags;
-    train_route_tags.emplace("type", "route");
-    train_route_tags.emplace("route", "light_rail");
-    train_route_tags.emplace("public_transport:version", "2");
-    return train_route_tags;
-}
-
-
-
 TEST_CASE("check valid simple bus route") {
     std::string format = "SQlite";
     std::string dataset_name = ".tmp-";
@@ -81,7 +55,7 @@ TEST_CASE("check valid simple bus route") {
         static constexpr int buffer_size = 10 * 1000 * 1000;
         osmium::memory::Buffer buffer(buffer_size);
 
-        std::map<std::string, std::string> tags_rel = get_bus_route_tags();
+        std::map<std::string, std::string> tags_rel = test_utils::get_bus_route_tags();
 
         SECTION("simple route only containing ways and stops") {
             std::vector<std::string> roles = {"stop", "stop", "stop", "", "", ""};
@@ -109,7 +83,7 @@ TEST_CASE("check valid simple bus route") {
 
         SECTION("unknown type") {;
             std::vector<std::string> roles = {"platform", "platform", "platform", "", "", ""};
-            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, get_light_rail_route_tags(), ids, types, roles);
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, test_utils::get_light_rail_route_tags(), ids, types, roles);
             std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
             RouteError error = checker.check_roles_order_and_type(relation1, objects);
             CHECK(error == RouteError::UNKNOWN_TYPE);
@@ -147,7 +121,7 @@ TEST_CASE("check valid simple bus route") {
         osmium::Way& way3 = test_utils::create_way(buffer, 3, node_refs3, tags1);
         buffer.commit();
 
-        std::map<std::string, std::string> tags_rel = get_bus_route_tags();
+        std::map<std::string, std::string> tags_rel = test_utils::get_bus_route_tags();
         osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles);
         std::vector<const osmium::OSMObject*> objects {&node1, &node2, &node3, &way1, &way2, &way3};
         RouteError error = checker.check_roles_order_and_type(relation1, objects);
@@ -167,7 +141,7 @@ TEST_CASE("check valid simple bus route") {
         static constexpr int buffer_size = 10 * 1000 * 1000;
         osmium::memory::Buffer buffer(buffer_size);
 
-        std::map<std::string, std::string> tags_rel = get_train_route_tags();
+        std::map<std::string, std::string> tags_rel = test_utils::get_train_route_tags();
 
         SECTION("train route stops at end") {
             std::vector<std::string> roles = {"", "", "", "stop", "stop", "stop"};
