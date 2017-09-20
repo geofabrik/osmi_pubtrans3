@@ -44,6 +44,7 @@ RouteWriter::RouteWriter(gdalcpp::Dataset& dataset, std::string& output_format,
     m_ptv2_routes_invalid.add_field("unknown_role", OFTString, 1);
     m_ptv2_routes_invalid.add_field("unknown_route_type", OFTString, 1);
     m_ptv2_routes_invalid.add_field("stop_is_not_node", OFTString, 1);
+    m_ptv2_routes_invalid.add_field("error_over_non_ferry", OFTString, 1);
     m_ptv2_error_lines.add_field("rel_id", OFTString, 10);
     m_ptv2_error_lines.add_field("way_id", OFTString, 10);
     m_ptv2_error_lines.add_field("node_id", OFTString, 10);
@@ -168,6 +169,9 @@ void RouteWriter::write_invalid_route(const osmium::Relation& relation, std::vec
     }
     if ((validation_result & RouteError::STOP_IS_NOT_NODE) == RouteError::STOP_IS_NOT_NODE) {
         feature.set_field("stop_is_not_node", "T");
+    }
+    if ((validation_result & RouteError::NO_FERRY) == RouteError::NO_FERRY) {
+        feature.set_field("error_over_non_ferry", "T");
     }
     feature.add_to_layer();
 }

@@ -103,9 +103,9 @@ bool PTv2Checker::check_valid_trolleybus_way(const osmium::TagList& member_tags)
             && check_valid_road_way(member_tags);
 }
 
-bool PTv2Checker::is_ferry(const osmium::TagList& member_tags) {
+bool PTv2Checker::is_ferry(const osmium::TagList& member_tags, bool permit_untagged_ways /* = false */) {
     const char* route = member_tags.get_value_by_key("route");
-    return (route && !strcmp(route, "ferry"));
+    return (route && !strcmp(route, "ferry")) || (permit_untagged_ways && !route);
 }
 
 bool PTv2Checker::roundabout_connected_to_previous_way(const BackOrFront previous_way_end, const osmium::Way* previous_way, const osmium::Way* way) {
@@ -160,6 +160,12 @@ RouteError PTv2Checker::is_way_usable(const osmium::Relation& relation, RouteTyp
         if (!check_valid_trolleybus_way(way->tags())) {
             m_writer.write_error_way(relation, 0, "trolley bus without trolley wire", way);
             return RouteError::NO_TROLLEY_WIRE;
+        }
+        break;
+    case RouteType::FERRY:
+        if (!is_ferry(way->tags(), true)) {
+            m_writer.write_error_way(relation, 0, "trolley bus without trolley wire", way);
+            return RouteError::NO_FERRY;
         }
         break;
     default:
@@ -399,16 +405,18 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
         // write this way member as error
         m_writer.write_error_way(relation, 0, "gap", way);
     }
+    // special treatment for roundabouts
+    // Mappers don't have to split roundabouts if they are used by routes.
     if (way->tags().has_tag("junction", "roundabout") && way->nodes().ends_have_same_id()) {
         if (status == MemberStatus::AFTER_ROUNDABOUT) {
             // roundabout after another roundabout, this is an impossible geometry and shoud be fixed
             m_writer.write_error_way(relation, 0, "roundabout after roundabout", way);
-            //FIXME Really return here?
+            // The status AFTER_ROUNDABOUT is kept because the next way after this double-roundabout still has this status.
             return 1;
         }
         if (status == MemberStatus::FIRST || status == MemberStatus::AFTER_GAP) {
+            // If this way is the first way in the route or the first after a gap, no other checks are necessary.
             status = MemberStatus::AFTER_ROUNDABOUT;
-            //FIXME Really return here?
             return 0;
         }
         if (status == MemberStatus::SECOND) {
@@ -429,6 +437,7 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
     // Now the real comparisons begin.
     assert(previous_way && member_it->type() == osmium::item_type::way);
     if (status == MemberStatus::AFTER_ROUNDABOUT) {
+        // check which end of the way is connected to the roundabout
         previous_way_end = roundabout_connected_to_next_way(previous_way, way);
         if (previous_way_end == BackOrFront::UNDEFINED) {
             m_writer.write_error_way(relation, 0, "gap", way);

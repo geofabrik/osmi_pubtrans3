@@ -39,7 +39,8 @@ enum class RouteError : size_t {
     UNKNOWN_TYPE = 2048,
     STOP_TAG_MISSING = 4096,
     PLTF_TAG_MISSING = 8192,
-    STOP_IS_NOT_NODE = 16384
+    STOP_IS_NOT_NODE = 16384,
+    NO_FERRY = 32768
 };
 
 inline RouteError& operator|= (RouteError& a, const RouteError& b) {
