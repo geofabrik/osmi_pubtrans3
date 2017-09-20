@@ -11,6 +11,9 @@
 #include <osmium/relations/relations_manager.hpp>
 #include "ptv2_checker.hpp"
 
+/**
+ * The RouteManager class assembles relations and their members we are interested in.
+ */
 class RouteManager : public osmium::relations::RelationsManager<RouteManager, true, true, true, false> {
     RouteWriter m_writer;
     PTv2Checker m_checker;

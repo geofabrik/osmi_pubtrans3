@@ -12,6 +12,9 @@
 #include <osmium/index/id_set.hpp>
 #include <osmium/osm/relation.hpp>
 
+/**
+ * This handler populates a IdSet with IDs of all nodes which are a via member of a turn restriction.
+ */
 class TurnRestrictionHandler : public osmium::handler::Handler {
 private:
     osmium::index::IdSetDense<osmium::unsigned_object_id_type>& m_point_node_members;

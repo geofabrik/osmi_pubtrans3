@@ -135,6 +135,9 @@ int main(int argc, char* argv[]) {
     }
 
     osmium::index::IdSetDense<osmium::unsigned_object_id_type> point_node_members;
+
+    // This ItemStash collects the IDs of all nodes which are expected to be reference by a way because their tags require it.
+    // Examples: points, signals, stop positions
     osmium::ItemStash must_on_track;
     std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type> must_on_track_handles;
     {

@@ -16,14 +16,26 @@
 
 #include "abstract_view_handler.hpp"
 
+/**
+ * This handler class creates the points layer (`railway=switch`) and
+ * the layer of nodes which should be referenced by a way due to their tags (signals, points, stop positions etc.).
+ */
 class RailwayHandlerPass2 : public AbstractViewHandler {
+
+    /// The map holds the handles which point to the objects in the ItemStash and makes them accessible by their OSM ID.
     std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& m_must_on_track_handles;
+
+    /// item stash holds OSM objects to all nodes which have to be referenced by a way
     osmium::ItemStash& m_must_on_track;
+
+    /// Set of IDs which contain all via nodes of all turn restrictions
     osmium::index::IdSetDense<osmium::unsigned_object_id_type>& m_via_nodes;
 
+    /// GDAL layer for points (`railway=switch`)
     gdalcpp::Layer m_points;
-    gdalcpp::Layer m_on_track;
 
+    /// GDAL layer for nodes which should be referenced by a way but are not
+    gdalcpp::Layer m_on_track;
 
     void handle_point(const osmium::Node& node);
 
