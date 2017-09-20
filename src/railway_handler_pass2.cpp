@@ -81,7 +81,8 @@ void RailwayHandlerPass2::after_ways() {
         // get node by handle
         const osmium::Node& node = static_cast<const osmium::Node&>(m_must_on_track.get_item(it->second));
         const char* railway = node.get_value_by_key("railway");
-        if (!railway) {
+        const char* public_transport = node.get_value_by_key("public_transport");
+        if (!railway && !public_transport) {
             continue;
         }
         if (!node.location().valid()) {
@@ -94,7 +95,11 @@ void RailwayHandlerPass2::after_ways() {
         std::string the_timestamp (node.timestamp().to_iso());
         feature.set_field("lastchange", the_timestamp.c_str());
         feature.set_field("error", "not on track");
-        feature.set_field("type", railway);
+        if (public_transport) {
+            feature.set_field("type", public_transport);
+        } else {
+            feature.set_field("type", railway);
+        }
         feature.add_to_layer();
     }
 }
