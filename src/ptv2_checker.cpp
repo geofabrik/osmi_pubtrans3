@@ -378,10 +378,10 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
         const osmium::Way* previous_way, osmium::RelationMemberList::const_iterator member_it, MemberStatus& status,
         BackOrFront& previous_way_end) {
     const char* role = member_it->role();
-    if (member_it->ref() == 0 && status == MemberStatus::BEFORE_FIRST) {
+    if (!member_it->full_member() && status == MemberStatus::BEFORE_FIRST) {
         // We can ignore missing members if we are still in the stop/platform section
         return 0;
-    } else if (member_it->ref() == 0) {
+    } else if (!member_it->full_member()) {
         status = MemberStatus::AFTER_MISSING;
         return 0;
     }
