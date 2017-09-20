@@ -108,10 +108,12 @@ bool PTv2Checker::is_ferry(const osmium::TagList& member_tags) {
     return (route && !strcmp(route, "ferry"));
 }
 
-bool PTv2Checker::roundabout_connected_to_previous_way(const osmium::NodeRef* common_node, const osmium::Way* way) {
+bool PTv2Checker::roundabout_connected_to_previous_way(const BackOrFront previous_way_end, const osmium::Way* previous_way, const osmium::Way* way) {
     for (const osmium::NodeRef& nd_ref : way->nodes()) {
-        if (common_node->ref() == nd_ref.ref()) {
+        if ((previous_way_end == BackOrFront::FRONT && previous_way->nodes().front().ref() == nd_ref.ref())
+                || (previous_way_end == BackOrFront::BACK && previous_way->nodes().back().ref() == nd_ref.ref())) {
             return true;
+
         }
     }
     return false;
@@ -126,15 +128,15 @@ bool PTv2Checker::roundabout_as_second_after_gap(const osmium::Way* previous_way
     return false;
 }
 
-const osmium::NodeRef* PTv2Checker::roundabout_connected_to_next_way(const osmium::Way* previous_way, const osmium::Way* way) {
+BackOrFront PTv2Checker::roundabout_connected_to_next_way(const osmium::Way* previous_way, const osmium::Way* way) {
     for (const osmium::NodeRef& nd_ref : previous_way->nodes()) {
         if (way->nodes().front().ref() == nd_ref.ref()) {
-            return &(way->nodes().back());
+            return BackOrFront::BACK;
         } else if (way->nodes().back().ref() == nd_ref.ref()) {
-            return &(way->nodes().front());
+            return BackOrFront::FRONT;
         }
     }
-    return nullptr;
+    return BackOrFront::UNDEFINED;
 }
 
 RouteError PTv2Checker::is_way_usable(const osmium::Relation& relation, RouteType type, const osmium::Way* way) {
@@ -345,122 +347,150 @@ RouteError PTv2Checker::handle_unknown_role(const osmium::Relation& relation, co
     return error;
 }
 
-int PTv2Checker::find_gaps(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
-        std::vector<const char*>& roles) {
+int PTv2Checker::find_gaps(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects) {
     MemberStatus status = MemberStatus::BEFORE_FIRST;
-    const osmium::NodeRef* next_node;
+    BackOrFront previous_way_end = BackOrFront::UNDEFINED;
     int gaps_count = 0;
-    for (size_t i = 0; i < relation.members().size(); ++i) {
-        const osmium::OSMObject* member = member_objects.at(i);
-        const char* role = roles.at(i);
-        if (member == nullptr && status == MemberStatus::BEFORE_FIRST) {
-            // We can ignore missing members if we are still in the stop/platform section
-            continue;
-        } else if (member == nullptr) {
-            status = MemberStatus::AFTER_MISSING;
-            continue;
+    const osmium::Way* previous_way = nullptr;
+    std::vector<const osmium::OSMObject*>::const_iterator obj_it = member_objects.cbegin();
+    osmium::RelationMemberList::const_iterator member_it = relation.members().cbegin();
+    for (size_t i = 0; obj_it != member_objects.cend(), member_it != relation.members().cend(); ++obj_it, ++member_it, ++i) {
+        const osmium::OSMObject* object = *obj_it;
+        const osmium::Way* way = nullptr;
+        if (member_it->type() == osmium::item_type::way && object != nullptr) {
+            way = static_cast<const osmium::Way*>(object);
         }
-        // check role and type
-        if (status == MemberStatus::BEFORE_FIRST && member->type() == osmium::item_type::way && !strcmp(role, "")) {
-            status = MemberStatus::FIRST;
-        }
-        if (status == MemberStatus::BEFORE_FIRST) {
-            // All further checks are only done for the members after the list of stops/platforms.
-            continue;
-        }
-
-        // check if it is a way
-        if (member->type() != osmium::item_type::way || strcmp(role, "")) {
-            status = MemberStatus::AFTER_GAP;
-            continue;
-        }
-
-        // check if it is a roundabout
-        const osmium::Way* way = static_cast<const osmium::Way*>(member);
-        if (status == MemberStatus::AFTER_GAP) {
-            // write this way member as error
-            m_writer.write_error_way(relation, 0, "gap", way);
-        }
-        if (way->tags().has_tag("junction", "roundabout") && way->nodes().ends_have_same_id()) {
-            if (status == MemberStatus::AFTER_ROUNDABOUT) {
-                // roundabout after another roundabout, this is an impossible geometry and shoud be fixed
-                m_writer.write_error_way(relation, 0, "roundabout after roundabout", way);
-                ++gaps_count;
-                continue;
-            }
-            if (status == MemberStatus::FIRST || status == MemberStatus::AFTER_GAP) {
-                status = MemberStatus::AFTER_ROUNDABOUT;
-                continue;
-            }
-            if (status == MemberStatus::SECOND) {
-                status = MemberStatus::SECOND_ROUNDABOUT;
-            } else {
-                status = MemberStatus::ROUNDABOUT;
-            }
-        }
-        if (status == MemberStatus::FIRST || status == MemberStatus::AFTER_MISSING) {
-            status = MemberStatus::SECOND;
-            continue;
-        }
-        if (status == MemberStatus::AFTER_GAP) {
-            status = MemberStatus::SECOND;
-            continue;
-        }
-
-        // Now the real comparisons begin.
-        assert(member_objects.at(i - 1));
-        const osmium::Way* previous_way = static_cast<const osmium::Way*>(member_objects.at(i - 1));
-        if (status == MemberStatus::AFTER_ROUNDABOUT) {
-            next_node = roundabout_connected_to_next_way(previous_way, way);
-            if (next_node == nullptr) {
-                m_writer.write_error_way(relation, 0, "gap", way);
-                status = MemberStatus::AFTER_GAP;
-                ++gaps_count;
-            } else {
-                status = MemberStatus::NORMAL;
-            }
-        } else if (status == MemberStatus::ROUNDABOUT) {
-            // check if any of the nodes of the roundabout matches the beginning or end node
-            if (!roundabout_connected_to_previous_way(next_node, way)) {
-                m_writer.write_error_way(relation, 0, "gap", way);
-                m_writer.write_error_point(relation, next_node, "gap at this location", way->id());
-                ++gaps_count;
-            }
-            status = MemberStatus::AFTER_ROUNDABOUT;
-        } else if (status == MemberStatus::SECOND_ROUNDABOUT) {
-            if (!roundabout_as_second_after_gap(previous_way, way)) {
-                m_writer.write_error_way(relation, 0, "gap", way);
-                ++gaps_count;
-            }
-            status = MemberStatus::AFTER_ROUNDABOUT;
-        }
-        else if (status == MemberStatus::SECOND) {
-            //TODO secure for incomplete relations
-            if (way->nodes().front().ref() == previous_way->nodes().front().ref()
-                    || way->nodes().front().ref() == previous_way->nodes().back().ref()) {
-                next_node = &(way->nodes().back());
-                status = MemberStatus::NORMAL;
-            } else if (way->nodes().back().ref() == previous_way->nodes().front().ref()
-                    || way->nodes().back().ref() == previous_way->nodes().back().ref()) {
-                next_node = &(way->nodes().front());
-                status = MemberStatus::NORMAL;
-            } else {
-                m_writer.write_error_way(relation, 0, "gap", previous_way);
-                status = MemberStatus::AFTER_GAP;
-                ++gaps_count;
-            }
-        } else if (status == MemberStatus::NORMAL) {
-            if (way->nodes().front().ref() == next_node->ref()) {
-                next_node = &(way->nodes().back());
-            } else if (way->nodes().back().ref() == next_node->ref()) {
-                next_node = &(way->nodes().front());
-            } else {
-                m_writer.write_error_way(relation, next_node->ref(), "gap", previous_way);
-                m_writer.write_error_point(relation, next_node, "gap at this location", way->id());
-                ++gaps_count;
-                status = MemberStatus::SECOND;
-            }
+        gaps_count += gap_detector_member_handling(relation, way, previous_way, member_it, status, previous_way_end);
+        if (member_it->type() == osmium::item_type::way && object) {
+            previous_way = static_cast<const osmium::Way*>(object);
         }
     }
     return gaps_count;
+}
+
+int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, const osmium::Way* way,
+        const osmium::Way* previous_way, osmium::RelationMemberList::const_iterator member_it, MemberStatus& status,
+        BackOrFront& previous_way_end) {
+    const char* role = member_it->role();
+    if (member_it->ref() == 0 && status == MemberStatus::BEFORE_FIRST) {
+        // We can ignore missing members if we are still in the stop/platform section
+        return 0;
+    } else if (member_it->ref() == 0) {
+        status = MemberStatus::AFTER_MISSING;
+        return 0;
+    }
+    // check role and type
+    if (status == MemberStatus::BEFORE_FIRST && member_it->type() == osmium::item_type::way && !strcmp(role, "")) {
+        status = MemberStatus::FIRST;
+    }
+    if (status == MemberStatus::BEFORE_FIRST) {
+        // All further checks are only done for the members after the list of stops/platforms.
+        return 0;
+    }
+
+    // check if it is a way
+    if (member_it->type() != osmium::item_type::way || strcmp(role, "")) {
+        status = MemberStatus::AFTER_GAP;
+        return 0;
+    }
+
+    // check if it is a roundabout
+    if (status == MemberStatus::AFTER_GAP) {
+        // write this way member as error
+        m_writer.write_error_way(relation, 0, "gap", way);
+    }
+    if (way->tags().has_tag("junction", "roundabout") && way->nodes().ends_have_same_id()) {
+        if (status == MemberStatus::AFTER_ROUNDABOUT) {
+            // roundabout after another roundabout, this is an impossible geometry and shoud be fixed
+            m_writer.write_error_way(relation, 0, "roundabout after roundabout", way);
+            //FIXME Really return here?
+            return 1;
+        }
+        if (status == MemberStatus::FIRST || status == MemberStatus::AFTER_GAP) {
+            status = MemberStatus::AFTER_ROUNDABOUT;
+            //FIXME Really return here?
+            return 0;
+        }
+        if (status == MemberStatus::SECOND) {
+            status = MemberStatus::SECOND_ROUNDABOUT;
+        } else {
+            status = MemberStatus::ROUNDABOUT;
+        }
+    }
+    if (status == MemberStatus::FIRST || status == MemberStatus::AFTER_MISSING) {
+        status = MemberStatus::SECOND;
+        return 0;
+    }
+    if (status == MemberStatus::AFTER_GAP) {
+        status = MemberStatus::SECOND;
+        return 0;
+    }
+
+    // Now the real comparisons begin.
+    assert(previous_way && member_it->type() == osmium::item_type::way);
+    if (status == MemberStatus::AFTER_ROUNDABOUT) {
+        previous_way_end = roundabout_connected_to_next_way(previous_way, way);
+        if (previous_way_end == BackOrFront::UNDEFINED) {
+            m_writer.write_error_way(relation, 0, "gap", way);
+            status = MemberStatus::AFTER_GAP;
+            return 1;
+        } else {
+            status = MemberStatus::NORMAL;
+        }
+    } else if (status == MemberStatus::ROUNDABOUT) {
+        // check if any of the nodes of the roundabout matches the beginning or end node
+        status = MemberStatus::AFTER_ROUNDABOUT;
+        if (!roundabout_connected_to_previous_way(previous_way_end, previous_way, way)) {
+            m_writer.write_error_way(relation, 0, "gap", way);
+            const osmium::NodeRef* next_node = back_or_front_to_node_ref(previous_way_end, previous_way);
+            m_writer.write_error_point(relation, next_node, "gap at this location", way->id());
+            return 1;
+        }
+    } else if (status == MemberStatus::SECOND_ROUNDABOUT) {
+        status = MemberStatus::AFTER_ROUNDABOUT;
+        if (!roundabout_as_second_after_gap(previous_way, way)) {
+            m_writer.write_error_way(relation, 0, "gap", way);
+            return 1;
+        }
+    }
+    else if (status == MemberStatus::SECOND) {
+        //TODO secure for incomplete relations
+        if (way->nodes().front().ref() == previous_way->nodes().front().ref()
+                || way->nodes().front().ref() == previous_way->nodes().back().ref()) {
+            previous_way_end = BackOrFront::BACK;
+            status = MemberStatus::NORMAL;
+        } else if (way->nodes().back().ref() == previous_way->nodes().front().ref()
+                || way->nodes().back().ref() == previous_way->nodes().back().ref()) {
+            previous_way_end = BackOrFront::FRONT;
+            status = MemberStatus::NORMAL;
+        } else {
+            m_writer.write_error_way(relation, 0, "gap", previous_way);
+            status = MemberStatus::AFTER_GAP;
+            return 1;
+        }
+    } else if (status == MemberStatus::NORMAL) {
+        const osmium::NodeRef* next_node = back_or_front_to_node_ref(previous_way_end, previous_way);
+        if (way->nodes().front().ref() == next_node->ref()) {
+            next_node = &(way->nodes().back());
+        } else if (way->nodes().back().ref() == next_node->ref()) {
+            next_node = &(way->nodes().front());
+        } else {
+            m_writer.write_error_way(relation, next_node->ref(), "gap", previous_way);
+            m_writer.write_error_point(relation, next_node, "gap at this location", way->id());
+            status = MemberStatus::SECOND;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/*static*/ const osmium::NodeRef* PTv2Checker::back_or_front_to_node_ref(BackOrFront back_or_front, const osmium::Way* way) {
+    assert(back_or_front != BackOrFront::UNDEFINED);
+    const osmium::NodeRef* next_node = nullptr;
+    if (back_or_front == BackOrFront::BACK) {
+        next_node = &(way->nodes().back());
+    } else if (back_or_front == BackOrFront::FRONT) {
+        next_node = &(way->nodes().front());
+    }
+    return next_node;
 }

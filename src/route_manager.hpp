@@ -17,8 +17,7 @@ class RouteManager : public osmium::relations::RelationsManager<RouteManager, tr
 
     bool is_ptv2(const osmium::Relation& relation) const noexcept;
 
-    RouteError is_valid(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
-            std::vector<const char*>& roles);
+    RouteError is_valid(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects);
 
 public:
     RouteManager() = delete;

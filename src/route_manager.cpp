@@ -46,7 +46,7 @@ void RouteManager::process_route(const osmium::Relation& relation) {
         roles.push_back(member.role());
     }
     if (is_ptv2(relation)) {
-        RouteError validation_result = is_valid(relation, member_objects, roles);
+        RouteError validation_result = is_valid(relation, member_objects);
         if (validation_result == RouteError::CLEAN) {
             m_writer.write_valid_route(relation, member_objects, roles);
             return;
@@ -64,11 +64,10 @@ bool RouteManager::is_ptv2(const osmium::Relation& relation) const noexcept {
     return true;
 }
 
-RouteError RouteManager::is_valid(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
-        std::vector<const char*>& roles) {
+RouteError RouteManager::is_valid(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects) {
     RouteError result = RouteError::CLEAN;
     result |= m_checker.check_roles_order_and_type(relation, member_objects);
-    if (m_checker.find_gaps(relation, member_objects, roles) > 0) {
+    if (m_checker.find_gaps(relation, member_objects) > 0) {
         result |= RouteError::UNORDERED_GAP;
     }
     return result;

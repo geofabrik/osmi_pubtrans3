@@ -25,14 +25,6 @@ static osmium::item_type NODE = osmium::item_type::node;
 static osmium::item_type WAY = osmium::item_type::way;
 static osmium::item_type RELATION = osmium::item_type::relation;
 
-std::vector<const char*> build_roles_cstr_vec(const std::vector<std::string>& from) {
-    std::vector<const char*> roles_cstr;
-    for (const std::string& str : from) {
-        roles_cstr.push_back(str.c_str());
-    }
-    return roles_cstr;
-}
-
 
 TEST_CASE("check if gap detection works") {
     std::string format = "SQlite";
@@ -54,7 +46,6 @@ TEST_CASE("check if gap detection works") {
         std::vector<osmium::item_type> types = {NODE, NODE, WAY, WAY, WAY};
         std::vector<osmium::object_id_type> ids = {1, 2, 1, 2, 3};
         std::vector<std::string> roles = {"platform", "platform", "", "", ""};
-        std::vector<const char*> roles_cstr = build_roles_cstr_vec(roles);
 
         std::map<std::string, std::string> stop_pos;
         stop_pos.emplace("highway", "bus_stop");
@@ -81,7 +72,7 @@ TEST_CASE("check if gap detection works") {
 
             osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles);
             std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, &way1, &way2, &way3};
-            CHECK(checker.find_gaps(relation1, objects, roles_cstr) == 0);
+            CHECK(checker.find_gaps(relation1, objects) == 0);
         }
 
         SECTION("three ways, gaps between first and second") {
@@ -98,7 +89,7 @@ TEST_CASE("check if gap detection works") {
 
             osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles);
             std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, &way1, &way2, &way3};
-            CHECK(checker.find_gaps(relation1, objects, roles_cstr) == 1);
+            CHECK(checker.find_gaps(relation1, objects) == 1);
         }
 
         SECTION("three ways, second way is a roundabout, no gap") {
@@ -119,7 +110,7 @@ TEST_CASE("check if gap detection works") {
 
             osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles);
             std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, &way1, &way2, &way3};
-            CHECK(checker.find_gaps(relation1, objects, roles_cstr) == 0);
+            CHECK(checker.find_gaps(relation1, objects) == 0);
         }
 
         SECTION("three ways, second way is a roundabout but not connected to anything") {
@@ -140,7 +131,7 @@ TEST_CASE("check if gap detection works") {
 
             osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles);
             std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, &way1, &way2, &way3};
-            CHECK(checker.find_gaps(relation1, objects, roles_cstr) == 2);
+            CHECK(checker.find_gaps(relation1, objects) == 2);
         }
 
         SECTION("three ways, first way is a roundabout but not connected to anything") {
@@ -161,7 +152,7 @@ TEST_CASE("check if gap detection works") {
 
             osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles);
             std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, &way1, &way2, &way3};
-            CHECK(checker.find_gaps(relation1, objects, roles_cstr) == 1);
+            CHECK(checker.find_gaps(relation1, objects) == 1);
         }
     }
 

@@ -24,6 +24,12 @@ enum class MemberStatus : char {
     AFTER_ROUNDABOUT = 9
 };
 
+enum class BackOrFront : char {
+    UNDEFINED = 0,
+    FRONT = 1,
+    BACK = 2
+};
+
 class PTv2Checker {
     RouteWriter& m_writer;
 
@@ -33,6 +39,13 @@ class PTv2Checker {
     RouteError handle_errorneous_stop_platform(const osmium::Relation& relation, const osmium::OSMObject* object);
 
     RouteError handle_unknown_role(const osmium::Relation& relation, const osmium::OSMObject* object, const char* role);
+
+    int gap_detector_member_handling(const osmium::Relation& relation, /*const osmium::OSMObject* object,*/
+            const osmium::Way* way,
+            const osmium::Way* previous_way,
+            osmium::RelationMemberList::const_iterator member_it, MemberStatus& status, BackOrFront& previous_way_end);
+
+    static const osmium::NodeRef* back_or_front_to_node_ref(BackOrFront back_or_front, const osmium::Way* way);
 
 public:
     PTv2Checker() = delete;
@@ -55,11 +68,11 @@ public:
 
     bool is_ferry(const osmium::TagList& member_tags);
 
-    bool roundabout_connected_to_previous_way(const osmium::NodeRef* common_node, const osmium::Way* way);
+    bool roundabout_connected_to_previous_way(const BackOrFront, const osmium::Way* previous_way, const osmium::Way* way);
 
     bool roundabout_as_second_after_gap(const osmium::Way* previous_way, const osmium::Way* way);
 
-    const osmium::NodeRef* roundabout_connected_to_next_way(const osmium::Way* previous_way, const osmium::Way* way);
+    BackOrFront roundabout_connected_to_next_way(const osmium::Way* previous_way, const osmium::Way* way);
 
     RouteError is_way_usable(const osmium::Relation& relation, RouteType type, const osmium::Way* way);
 
@@ -72,8 +85,7 @@ public:
      */
     RouteError check_roles_order_and_type(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects);
 
-    int find_gaps(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
-            std::vector<const char*>& roles);
+    int find_gaps(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects);
 };
 
 
