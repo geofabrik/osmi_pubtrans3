@@ -8,9 +8,9 @@
 #include <ogr_core.h>
 #include "route_writer.hpp"
 
-RouteWriter::RouteWriter(gdalcpp::Dataset& dataset, std::string& output_format,
-    osmium::util::VerboseOutput& verbose_output, int epsg /*= 3857*/) :
-        OGROutputBase(verbose_output, output_format, epsg),
+RouteWriter::RouteWriter(gdalcpp::Dataset& dataset, Options& options,
+    osmium::util::VerboseOutput& verbose_output) :
+        OGROutputBase(verbose_output, options),
         m_dataset(dataset),
         m_ptv2_routes_valid(dataset, "ptv2_routes_valid", wkbMultiLineString, GDAL_DEFAULT_OPTIONS),
         m_ptv2_routes_invalid(dataset, "ptv2_routes_invalid", wkbMultiLineString, GDAL_DEFAULT_OPTIONS),
@@ -105,7 +105,7 @@ void RouteWriter::write_valid_route(const osmium::Relation& relation, std::vecto
 }
 
 void RouteWriter::write_invalid_route(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
-        std::vector<const char*>& roles, RouteError validation_result) {
+        RouteError validation_result) {
     OGRMultiLineString* ml = new OGRMultiLineString();
     for (const osmium::OSMObject* member : member_objects) {
         if (!member) {

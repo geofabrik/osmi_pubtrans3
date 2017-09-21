@@ -33,11 +33,13 @@ namespace test_utils {
 
     void add_relation_members(osmium::memory::Buffer& buffer, osmium::builder::Builder* builder,
             std::vector<osmium::object_id_type>& member_ids, std::vector<osmium::item_type>& member_types,
-            std::vector<std::string>& member_roles) {
-        assert(member_ids.size() == member_types.size() && member_ids.size() == member_roles.size());
+            std::vector<std::string>& member_roles, std::vector<const osmium::OSMObject*>& member_object_ptrs) {
+        assert(member_ids.size() == member_types.size());
+        assert(member_types.size() == member_roles.size());
+        assert(member_roles.size() == member_object_ptrs.size());
         osmium::builder::RelationMemberListBuilder rml_builder(buffer, builder);
         for (size_t i = 0; i < member_ids.size(); i++) {
-            rml_builder.add_member(member_types.at(i), member_ids.at(i), member_roles.at(i).c_str());
+            rml_builder.add_member(member_types.at(i), member_ids.at(i), member_roles.at(i).c_str(), member_object_ptrs.at(i));
         }
     }
 
@@ -87,15 +89,22 @@ namespace test_utils {
 
     osmium::Relation& create_relation(osmium::memory::Buffer& buffer, const osmium::object_id_type id, const tagmap& tags,
             std::vector<osmium::object_id_type>& member_ids, std::vector<osmium::item_type>& member_types,
-            std::vector<std::string>& member_roles) {
+            std::vector<std::string>& member_roles, std::vector<const osmium::OSMObject*>& member_object_ptrs) {
         osmium::builder::RelationBuilder relation_builder(buffer);
         osmium::Relation& relation = static_cast<osmium::Relation&>(relation_builder.object());
         relation.set_id(1);
         set_dummy_osm_object_attributes(relation);
         relation_builder.set_user("");
         add_tags(buffer, &relation_builder, tags);
-        add_relation_members(buffer, &relation_builder, member_ids, member_types, member_roles);
+        add_relation_members(buffer, &relation_builder, member_ids, member_types, member_roles, member_object_ptrs);
         return relation_builder.object();
+    }
+
+    osmium::Relation& create_relation(osmium::memory::Buffer& buffer, const osmium::object_id_type id, const tagmap& tags,
+            std::vector<osmium::object_id_type>& member_ids, std::vector<osmium::item_type>& member_types,
+            std::vector<std::string>& member_roles) {
+        std::vector<const osmium::OSMObject*> member_objects (member_types.size(), nullptr);
+        return create_relation(buffer, id, tags, member_ids, member_types, member_roles, member_objects);
     }
 
     std::map<std::string, std::string> get_bus_route_tags() {

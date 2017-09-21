@@ -10,9 +10,8 @@
 #include "route_manager.hpp"
 
 
-RouteManager::RouteManager(gdalcpp::Dataset& dataset, std::string& output_format,
-    osmium::util::VerboseOutput& verbose_output, int epsg /*= 3857*/) :
-        m_writer(dataset, output_format, verbose_output, epsg),
+RouteManager::RouteManager(gdalcpp::Dataset& dataset, Options& options, osmium::util::VerboseOutput& verbose_output) :
+        m_writer(dataset, options, verbose_output),
         m_checker(m_writer) { }
 
 bool RouteManager::new_relation(const osmium::Relation& relation) const noexcept {
@@ -51,7 +50,7 @@ void RouteManager::process_route(const osmium::Relation& relation) {
             m_writer.write_valid_route(relation, member_objects, roles);
             return;
         }
-        m_writer.write_invalid_route(relation, member_objects, roles, validation_result);
+        m_writer.write_invalid_route(relation, member_objects, validation_result);
     }
 }
 

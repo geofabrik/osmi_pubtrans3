@@ -28,7 +28,6 @@ static osmium::item_type RELATION = osmium::item_type::relation;
 
 
 TEST_CASE("check valid simple bus route") {
-    std::string format = "SQlite";
     std::string dataset_name = ".tmp-";
     srand (time(NULL));
     dataset_name += std::to_string(rand());
@@ -37,10 +36,11 @@ TEST_CASE("check valid simple bus route") {
         std::cerr << dataset_name << " already exists!\n";
         exit(1);
     }
-    gdalcpp::Dataset dataset("SQlite", dataset_name, gdalcpp::SRS(4326),
-            OGROutputBase::get_gdal_default_options(format));
+    Options options;
+    gdalcpp::Dataset dataset(options.output_format, dataset_name, gdalcpp::SRS(4326),
+            OGROutputBase::get_gdal_default_options(options.output_format));
     osmium::util::VerboseOutput vout {false};
-    RouteWriter writer (dataset, format, vout);
+    RouteWriter writer (dataset, options, vout);
     PTv2Checker checker(writer);
 
     SECTION("simple route only containing ways and stops/platforms") {

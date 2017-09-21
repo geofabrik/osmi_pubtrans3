@@ -31,11 +31,13 @@ class RailwayHandlerPass2 : public AbstractViewHandler {
     /// Set of IDs which contain all via nodes of all turn restrictions
     osmium::index::IdSetDense<osmium::unsigned_object_id_type>& m_via_nodes;
 
-    /// GDAL layer for points (`railway=switch`)
-    gdalcpp::Layer m_points;
+    Options& m_options;
 
     /// GDAL layer for nodes which should be referenced by a way but are not
     gdalcpp::Layer m_on_track;
+
+    /// GDAL layer for points (`railway=switch`)
+    std::unique_ptr<gdalcpp::Layer> m_points;
 
     void handle_point(const osmium::Node& node);
 
@@ -44,8 +46,8 @@ public:
 
     RailwayHandlerPass2(osmium::index::IdSetDense<osmium::unsigned_object_id_type>& via_nodes,
             std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& must_on_track_handles,
-            osmium::ItemStash& must_on_track, gdalcpp::Dataset& dataset, std::string& output_format,
-            osmium::util::VerboseOutput& verbose_output, int epsg = 3857);
+            osmium::ItemStash& must_on_track, gdalcpp::Dataset& dataset, Options& options,
+            osmium::util::VerboseOutput& verbose_output);
 
     void node(const osmium::Node& node);
 

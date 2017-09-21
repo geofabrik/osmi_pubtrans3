@@ -87,14 +87,13 @@ class RouteWriter : public OGROutputBase {
 public:
     RouteWriter() = delete;
 
-    RouteWriter(gdalcpp::Dataset& dataset, std::string& output_format,
-        osmium::util::VerboseOutput& verbose_output, int epsg = 3857);
+    RouteWriter(gdalcpp::Dataset& dataset, Options& options, osmium::util::VerboseOutput& verbose_output);
 
     void write_valid_route(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
             std::vector<const char*>& roles);
 
     void write_invalid_route(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
-            std::vector<const char*>& roles, RouteError validation_result);
+            RouteError validation_result);
 
     void write_error_way(const osmium::Relation& relation, const osmium::object_id_type node_id,
             const char* error_text, const osmium::Way* way);

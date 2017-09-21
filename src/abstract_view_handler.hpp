@@ -38,7 +38,7 @@ protected:
 public:
     AbstractViewHandler() = delete;
 
-    AbstractViewHandler(gdalcpp::Dataset& dataset, std::string& output_format, osmium::util::VerboseOutput& verbose_output, int epsg);
+    AbstractViewHandler(gdalcpp::Dataset& dataset, Options& options, osmium::util::VerboseOutput& verbose_output);
 
     virtual ~AbstractViewHandler();
 

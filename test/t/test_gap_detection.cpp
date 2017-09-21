@@ -27,7 +27,6 @@ static osmium::item_type RELATION = osmium::item_type::relation;
 
 
 TEST_CASE("check if gap detection works") {
-    std::string format = "SQlite";
     std::string dataset_name = ".tmp-";
     srand (time(NULL));
     dataset_name += std::to_string(rand());
@@ -36,10 +35,11 @@ TEST_CASE("check if gap detection works") {
         std::cerr << dataset_name << " already exists!\n";
         exit(1);
     }
-    gdalcpp::Dataset dataset("SQlite", dataset_name, gdalcpp::SRS(4326),
-            OGROutputBase::get_gdal_default_options(format));
+    Options options;
+    gdalcpp::Dataset dataset(options.output_format, dataset_name, gdalcpp::SRS(4326),
+            OGROutputBase::get_gdal_default_options(options.output_format));
     osmium::util::VerboseOutput vout {false};
-    RouteWriter writer (dataset, format, vout);
+    RouteWriter writer (dataset, options, vout);
     PTv2Checker checker(writer);
 
     SECTION("simple tests") {
@@ -69,9 +69,9 @@ TEST_CASE("check if gap detection works") {
             buffer.commit();
             osmium::Way& way3 = test_utils::create_way(buffer, 3, node_refs3, tags1);
             buffer.commit();
-
-            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles);
             std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, &way1, &way2, &way3};
+
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
             CHECK(checker.find_gaps(relation1, objects) == 0);
         }
 
@@ -86,9 +86,9 @@ TEST_CASE("check if gap detection works") {
             buffer.commit();
             osmium::Way& way3 = test_utils::create_way(buffer, 3, node_refs3, tags1);
             buffer.commit();
-
-            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles);
             std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, &way1, &way2, &way3};
+
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
             CHECK(checker.find_gaps(relation1, objects) == 1);
         }
 
@@ -107,9 +107,9 @@ TEST_CASE("check if gap detection works") {
             buffer.commit();
             osmium::Way& way3 = test_utils::create_way(buffer, 3, node_refs3, tags1);
             buffer.commit();
-
-            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles);
             std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, &way1, &way2, &way3};
+
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
             CHECK(checker.find_gaps(relation1, objects) == 0);
         }
 
@@ -128,9 +128,9 @@ TEST_CASE("check if gap detection works") {
             buffer.commit();
             osmium::Way& way3 = test_utils::create_way(buffer, 3, node_refs3, tags1);
             buffer.commit();
-
-            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles);
             std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, &way1, &way2, &way3};
+
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
             CHECK(checker.find_gaps(relation1, objects) == 2);
         }
 
@@ -149,9 +149,9 @@ TEST_CASE("check if gap detection works") {
             buffer.commit();
             osmium::Way& way3 = test_utils::create_way(buffer, 3, node_refs3, tags1);
             buffer.commit();
-
-            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles);
             std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, &way1, &way2, &way3};
+
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
             CHECK(checker.find_gaps(relation1, objects) == 1);
         }
     }

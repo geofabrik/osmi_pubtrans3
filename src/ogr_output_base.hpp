@@ -33,6 +33,8 @@
 
 #include <osmium/util/verbose_output.hpp>
 
+#include "options.hpp"
+
 /**
  * Provide commont things for working with GDAL. This class does not care for the dataset
  * because the dataset is shared.
@@ -63,7 +65,7 @@ protected:
 public:
     OGROutputBase() = delete;
 
-    OGROutputBase(osmium::util::VerboseOutput& verbose_output, std::string& output_format, int epsg);
+    OGROutputBase(osmium::util::VerboseOutput& verbose_output, Options& options);
 
     /**
      * \brief Add default options for the to the back of a vector of options.

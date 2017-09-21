@@ -20,13 +20,12 @@
 
 #include "ogr_output_base.hpp"
 
-OGROutputBase::OGROutputBase(osmium::util::VerboseOutput& verbose_output, std::string& output_format,
-        int epsg) :
+OGROutputBase::OGROutputBase(osmium::util::VerboseOutput& verbose_output, Options& options) :
 #ifndef ONLYMERCATOROUTPUT
-        m_factory(osmium::geom::Projection(epsg)),
+        m_factory(osmium::geom::Projection(options.srs)),
 #endif
         m_verbose_output(verbose_output),
-        GDAL_DEFAULT_OPTIONS(get_gdal_default_options(output_format)) { }
+        GDAL_DEFAULT_OPTIONS(get_gdal_default_options(options.output_format)) { }
 
 std::vector<std::string> OGROutputBase::get_gdal_default_options(std::string& output_format) {
     std::vector<std::string> default_options;

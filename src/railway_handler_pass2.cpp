@@ -9,19 +9,22 @@
 
 RailwayHandlerPass2::RailwayHandlerPass2(osmium::index::IdSetDense<osmium::unsigned_object_id_type>& via_nodes,
         std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& must_on_track_handles,
-        osmium::ItemStash& must_on_track, gdalcpp::Dataset& dataset, std::string& output_format,
-        osmium::util::VerboseOutput& verbose_output, int epsg /*= 3857*/) :
-        AbstractViewHandler(dataset, output_format, verbose_output, epsg),
+        osmium::ItemStash& must_on_track, gdalcpp::Dataset& dataset, Options& options,
+        osmium::util::VerboseOutput& verbose_output) :
+        AbstractViewHandler(dataset, options, verbose_output),
         m_must_on_track_handles(must_on_track_handles),
         m_must_on_track(must_on_track),
         m_via_nodes(via_nodes),
-        m_points(dataset, "points", wkbPoint, GDAL_DEFAULT_OPTIONS),
+        m_options(options),
         m_on_track(dataset, "on_track", wkbPoint, GDAL_DEFAULT_OPTIONS) {
     // add fields to layers
-    m_points.add_field("node_id", OFTString, 10);
-    m_points.add_field("lastchange", OFTString, 21);
-    m_points.add_field("type", OFTString, 50);
-    m_points.add_field("ref", OFTString, 50);
+    if (options.points) {
+        m_points.reset(new gdalcpp::Layer(dataset, "points", wkbPoint, GDAL_DEFAULT_OPTIONS));
+        m_points->add_field("node_id", OFTString, 10);
+        m_points->add_field("lastchange", OFTString, 21);
+        m_points->add_field("type", OFTString, 50);
+        m_points->add_field("ref", OFTString, 50);
+    }
     m_on_track.add_field("node_id", OFTString, 10);
     m_on_track.add_field("lastchange", OFTString, 21);
     m_on_track.add_field("type", OFTString, 21);
@@ -29,6 +32,9 @@ RailwayHandlerPass2::RailwayHandlerPass2(osmium::index::IdSetDense<osmium::unsig
 }
 
 void RailwayHandlerPass2::node(const osmium::Node& node) {
+    if (!m_options.points) {
+        return;
+    }
     const char* railway = node.get_value_by_key("railway");
     if (railway && !strcmp(railway, "switch")) {
         handle_point(node);
@@ -36,7 +42,7 @@ void RailwayHandlerPass2::node(const osmium::Node& node) {
 }
 
 void RailwayHandlerPass2::handle_point(const osmium::Node& node) {
-    gdalcpp::Feature feature(m_points, m_factory.create_point(node));
+    gdalcpp::Feature feature(*m_points, m_factory.create_point(node));
     static char idbuffer[20];
     sprintf(idbuffer, "%ld", node.id());
     feature.set_field("node_id", idbuffer);
@@ -83,6 +89,8 @@ void RailwayHandlerPass2::after_ways() {
         const char* railway = node.get_value_by_key("railway");
         const char* public_transport = node.get_value_by_key("public_transport");
         if (!railway && !public_transport) {
+            continue;
+        } else if (railway && !public_transport && !m_options.points) {
             continue;
         }
         if (!node.location().valid()) {

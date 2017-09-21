@@ -27,20 +27,21 @@ class RailwayHandlerPass1 : public AbstractViewHandler {
     std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& m_must_on_track_handles;
 
     /// GDAL layer for level crossings
-    gdalcpp::Layer m_crossings;
+    std::unique_ptr<gdalcpp::Layer> m_crossings;
+
+    Options& m_options;
 
     void handle_crossing(const osmium::Node& node);
 
-    void add_error_node(gdalcpp::Layer& layer, const osmium::Node& node, const char* third_field_name,
+    void add_error_node(const osmium::Node& node, const char* third_field_name,
             const char* third_field_value, const char* fourth_field_name, const char* fourth_field_value);
 
 public:
     RailwayHandlerPass1() = delete;
 
-    RailwayHandlerPass1(gdalcpp::Dataset& dataset, std::string& output_format,
+    RailwayHandlerPass1(gdalcpp::Dataset& dataset, Options& options,
             osmium::util::VerboseOutput& verbose_output, osmium::ItemStash& signals,
-            std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& must_on_track_handles,
-            int epsg = 3857);
+            std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& must_on_track_handles);
 
     void node(const osmium::Node& node);
 

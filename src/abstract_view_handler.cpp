@@ -19,8 +19,8 @@
 
 #include "abstract_view_handler.hpp"
 
-AbstractViewHandler::AbstractViewHandler(gdalcpp::Dataset& dataset, std::string& output_format, osmium::util::VerboseOutput& verbose_output, int epsg) :
-        OGROutputBase(verbose_output, output_format, epsg),
+AbstractViewHandler::AbstractViewHandler(gdalcpp::Dataset& dataset, Options& options, osmium::util::VerboseOutput& verbose_output) :
+        OGROutputBase(verbose_output, options),
         m_dataset(dataset) {
     m_dataset.enable_auto_transactions(10000);
 }
