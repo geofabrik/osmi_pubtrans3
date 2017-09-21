@@ -59,6 +59,8 @@ protected:
 
     const std::vector<std::string> GDAL_DEFAULT_OPTIONS;
 
+    Options& m_options;
+
     /// maximum length of a string field
     static constexpr size_t MAX_FIELD_LENGTH = 254;
 

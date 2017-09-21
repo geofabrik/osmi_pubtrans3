@@ -25,7 +25,8 @@ OGROutputBase::OGROutputBase(osmium::util::VerboseOutput& verbose_output, Option
         m_factory(osmium::geom::Projection(options.srs)),
 #endif
         m_verbose_output(verbose_output),
-        GDAL_DEFAULT_OPTIONS(get_gdal_default_options(options.output_format)) { }
+        GDAL_DEFAULT_OPTIONS(get_gdal_default_options(options.output_format)),
+        m_options(options) { }
 
 std::vector<std::string> OGROutputBase::get_gdal_default_options(std::string& output_format) {
     std::vector<std::string> default_options;

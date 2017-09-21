@@ -29,12 +29,37 @@ class RailwayHandlerPass1 : public AbstractViewHandler {
     /// GDAL layer for level crossings
     std::unique_ptr<gdalcpp::Layer> m_crossings;
 
-    Options& m_options;
+    /// GDAL layer for platforms
+    std::unique_ptr<gdalcpp::Layer> m_platforms;
+    std::unique_ptr<gdalcpp::Layer> m_platforms_l;
+
+    /// GDAL layer for stations
+    std::unique_ptr<gdalcpp::Layer> m_stations;
+    std::unique_ptr<gdalcpp::Layer> m_stations_l;
+
+    /// GDAL layer for stops
+    std::unique_ptr<gdalcpp::Layer> m_stops;
+
+    /// GDAL layer for stops/platforms which onyl have highway=bus_stop but no public_transport=*
+    std::unique_ptr<gdalcpp::Layer> m_stops_only_highway;
 
     void handle_crossing(const osmium::Node& node);
 
-    void add_error_node(const osmium::Node& node, const char* third_field_name,
+    void add_crossing_node(const osmium::Node& node, const char* third_field_name,
             const char* third_field_value, const char* fourth_field_name, const char* fourth_field_value);
+
+    void handle_stop(const osmium::OSMObject& object, const char* public_transport, const char* railway);
+
+    void add_stop_pltf_node(gdalcpp::Layer& layer, const osmium::Node& node, bool refs, bool amenity);
+
+    void add_stop_pltf_way(gdalcpp::Layer& layer, const osmium::Way& way, bool refs, bool amenity);
+
+    static void set_fields(gdalcpp::Feature& feature, const osmium::OSMObject& object,
+            bool refs, bool amenity);
+
+    static void set_node_id(gdalcpp::Feature& feature, const osmium::Node& node);
+
+    static void set_way_id(gdalcpp::Feature& feature, const osmium::Way& way);
 
 public:
     RailwayHandlerPass1() = delete;
@@ -44,8 +69,6 @@ public:
             std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& must_on_track_handles);
 
     void node(const osmium::Node& node);
-
-    static std::string tags_string(const osmium::TagList& tags);
 
     void way(const osmium::Way&);
 

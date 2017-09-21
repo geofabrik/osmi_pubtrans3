@@ -42,24 +42,33 @@ void print_help(char* arg0) {
               << "\n" \
               << "Content Related Options:\n" \
               << "--no-crossings        Don't write the crossings layer.\n" \
+              << "--no-platforms        Don't write the platforms layer.\n" \
               << "--no-points           Don't write a layer of points (railway=switch).\n" \
               << "--no-railway-details  Don't check if signals, buffer stops, milestones etc.\n" \
+              << "--no-stations         Don't write the stations layer.\n" \
+              << "--no-stops            Don't write the stops layer.\n" \
               << "                      are mapped on the way which represents the track.\n";
 }
 
 int main(int argc, char* argv[]) {
 
     const int NO_CROSSINGS = 1000;
-    const int NO_POINTS = 1001;
-    const int NO_RAILWAY_DETAILS = 1002;
+    const int NO_PLATFORMS = 1001;
+    const int NO_POINTS = 1002;
+    const int NO_RAILWAY_DETAILS = 1003;
+    const int NO_STOPS = 1004;
+    const int NO_STATIONS = 1005;
 
     static struct option long_options[] = {
         {"no-crossings",   no_argument, 0, NO_CROSSINGS},
         {"help",   no_argument, 0, 'h'},
         {"format", required_argument, 0, 'f'},
         {"index", required_argument, 0, 'i'},
+        {"no-platforms",   no_argument, 0, NO_PLATFORMS},
         {"no-points",   no_argument, 0, NO_POINTS},
         {"no-railway-details",   no_argument, 0, NO_RAILWAY_DETAILS},
+        {"no-stations",   no_argument, 0, NO_STATIONS},
+        {"no-stops",   no_argument, 0, NO_STOPS},
         {"srs", required_argument, 0, 's'},
         {"verbose",   no_argument, 0, 'v'},
         {0, 0, 0, 0}
@@ -116,6 +125,15 @@ int main(int argc, char* argv[]) {
                 break;
             case NO_POINTS:
                 options.points = false;
+                break;
+            case NO_STOPS:
+                options.stops = false;
+                break;
+            case NO_PLATFORMS:
+                options.platforms = false;
+                break;
+            case NO_STATIONS:
+                options.stations = false;
                 break;
             case 'v':
                 options.verbose = true;

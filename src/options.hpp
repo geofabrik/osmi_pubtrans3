@@ -14,8 +14,11 @@ struct Options {
     int srs = 3857;
     bool verbose = false;
     bool crossings = true;
+    bool platforms = true;
     bool points = true;
     bool railway_details = true;
+    bool stations = true;
+    bool stops = true;
 };
 
 
