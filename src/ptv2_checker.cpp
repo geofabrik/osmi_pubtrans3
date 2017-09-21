@@ -381,7 +381,7 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
     if (way == nullptr && status == MemberStatus::BEFORE_FIRST) {
         // We can ignore missing members if we are still in the stop/platform section
         return 0;
-    } else if (way == nullptr) {
+    } else if (way == nullptr && member_it->type() == osmium::item_type::way) {
         status = MemberStatus::AFTER_MISSING;
         return 0;
     }
