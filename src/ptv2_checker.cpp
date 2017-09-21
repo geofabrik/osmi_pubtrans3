@@ -88,7 +88,7 @@ bool PTv2Checker::check_valid_road_way(const osmium::TagList& member_tags) {
         || !strcmp(highway, "trunk_link") || !strcmp(highway, "primary") || !strcmp(highway, "primary_link")
         || !strcmp(highway, "secondary") || !strcmp(highway, "secondary_link") || !strcmp(highway, "tertiary")
         || !strcmp(highway, "tertiary_link") || !strcmp(highway, "unclassified") || !strcmp(highway, "residential")
-        || !strcmp(highway, "service") || !strcmp(highway, "track"));
+        || !strcmp(highway, "service") || !strcmp(highway, "track") || !strcmp(highway, "pedestrian"));
 }
 
 bool PTv2Checker::check_valid_trolleybus_way(const osmium::TagList& member_tags) {
@@ -378,10 +378,10 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
         const osmium::Way* previous_way, osmium::RelationMemberList::const_iterator member_it, MemberStatus& status,
         BackOrFront& previous_way_end) {
     const char* role = member_it->role();
-    if (!member_it->full_member() && status == MemberStatus::BEFORE_FIRST) {
+    if (way == nullptr && status == MemberStatus::BEFORE_FIRST) {
         // We can ignore missing members if we are still in the stop/platform section
         return 0;
-    } else if (!member_it->full_member()) {
+    } else if (way == nullptr) {
         status = MemberStatus::AFTER_MISSING;
         return 0;
     }
@@ -480,9 +480,9 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
     } else if (status == MemberStatus::NORMAL) {
         const osmium::NodeRef* next_node = back_or_front_to_node_ref(previous_way_end, previous_way);
         if (way->nodes().front().ref() == next_node->ref()) {
-            next_node = &(way->nodes().back());
+            previous_way_end = BackOrFront::BACK;
         } else if (way->nodes().back().ref() == next_node->ref()) {
-            next_node = &(way->nodes().front());
+            previous_way_end = BackOrFront::FRONT;
         } else {
             m_writer.write_error_way(relation, next_node->ref(), "gap", previous_way);
             m_writer.write_error_point(relation, next_node, "gap at this location", way->id());
