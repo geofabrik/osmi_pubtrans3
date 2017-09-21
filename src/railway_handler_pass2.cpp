@@ -102,7 +102,7 @@ void RailwayHandlerPass2::after_ways() {
         feature.set_field("node_id", idbuffer);
         std::string the_timestamp (node.timestamp().to_iso());
         feature.set_field("lastchange", the_timestamp.c_str());
-        feature.set_field("error", "not on track");
+        feature.set_field("error", "not on a way");
         if (public_transport) {
             feature.set_field("type", public_transport);
         } else {
