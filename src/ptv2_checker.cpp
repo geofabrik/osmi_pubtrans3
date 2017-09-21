@@ -440,7 +440,7 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
         // check which end of the way is connected to the roundabout
         previous_way_end = roundabout_connected_to_next_way(previous_way, way);
         if (previous_way_end == BackOrFront::UNDEFINED) {
-            m_writer.write_error_way(relation, 0, "gap", way);
+            m_writer.write_error_way(relation, 0, "gap or unordered before this way", way);
             status = MemberStatus::AFTER_GAP;
             return 1;
         } else {
@@ -452,7 +452,7 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
         if (!roundabout_connected_to_previous_way(previous_way_end, previous_way, way)) {
             m_writer.write_error_way(relation, 0, "gap", way);
             const osmium::NodeRef* next_node = back_or_front_to_node_ref(previous_way_end, previous_way);
-            m_writer.write_error_point(relation, next_node, "gap at this location", way->id());
+            m_writer.write_error_point(relation, next_node, "open end at this location", way->id());
             return 1;
         }
     } else if (status == MemberStatus::SECOND_ROUNDABOUT) {
@@ -473,7 +473,7 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
             previous_way_end = BackOrFront::FRONT;
             status = MemberStatus::NORMAL;
         } else {
-            m_writer.write_error_way(relation, 0, "gap", previous_way);
+            m_writer.write_error_way(relation, 0, "gap or unordered after this way", previous_way);
             status = MemberStatus::AFTER_GAP;
             return 1;
         }
@@ -485,7 +485,7 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
             previous_way_end = BackOrFront::FRONT;
         } else {
             m_writer.write_error_way(relation, next_node->ref(), "gap", previous_way);
-            m_writer.write_error_point(relation, next_node, "gap at this location", way->id());
+            m_writer.write_error_point(relation, next_node, "gap or unordered before this way", way->id());
             status = MemberStatus::SECOND;
             return 1;
         }

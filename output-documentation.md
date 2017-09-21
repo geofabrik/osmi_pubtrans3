@@ -204,8 +204,8 @@ which are located next to an error (e.g. gaps). This layer has following fields:
  * `stop/platform after route`
  * `roundabout after roundabout`
  * `unknown role 'ROLE'` where `ROLE` is the role of the member causing the error
- * `gap at this location`
- * `gap`
+ * `gap or unordered before this way`
+ * `gap or unordered after this way`
  * `stop is not a node`
  * `route has only stops/platforms`
 * `from`
@@ -232,8 +232,7 @@ which are located next to an error (e.g. gaps).
  * `stop/platform after route`
  * `roundabout after roundabout`
  * `unknown role 'ROLE'` where `ROLE` is the role of the member causing the error
- * `gap at this location`
- * `gap`
+ * `open end at this location`
  * `stop is not a node`
  * `route has only stops/platforms`
 * `from`
@@ -242,3 +241,6 @@ which are located next to an error (e.g. gaps).
 * `ref`
 * `name`
 * `route`
+
+The bar `|` characters are just as suggested line breaks.
+ 
