@@ -79,7 +79,7 @@ namespace test_utils {
             std::vector<const osmium::NodeRef*>& node_refs, const tagmap& tags) {
         osmium::builder::WayBuilder way_builder(buffer);
         osmium::Way& way = static_cast<osmium::Way&>(way_builder.object());
-        way.set_id(1);
+        way.set_id(id);
         test_utils::set_dummy_osm_object_attributes(way);
         way_builder.set_user("");
         add_tags(buffer, &way_builder, tags);
@@ -92,7 +92,7 @@ namespace test_utils {
             std::vector<std::string>& member_roles, std::vector<const osmium::OSMObject*>& member_object_ptrs) {
         osmium::builder::RelationBuilder relation_builder(buffer);
         osmium::Relation& relation = static_cast<osmium::Relation&>(relation_builder.object());
-        relation.set_id(1);
+        relation.set_id(id);
         set_dummy_osm_object_attributes(relation);
         relation_builder.set_user("");
         add_tags(buffer, &relation_builder, tags);
