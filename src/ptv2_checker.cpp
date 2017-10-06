@@ -464,6 +464,10 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
         }
     }
     else if (status == MemberStatus::SECOND) {
+        if (previous_way->id() == way->id()) {
+            // The first and the second way are equal. This is valid in some cases. So we just return.
+            return 0;
+        }
         //TODO secure for incomplete relations
         if (way->nodes().front().ref() == previous_way->nodes().front().ref()
                 || way->nodes().front().ref() == previous_way->nodes().back().ref()) {
