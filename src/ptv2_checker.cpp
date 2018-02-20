@@ -69,7 +69,7 @@ bool PTv2Checker::check_valid_railway_track(RouteType type, const osmium::TagLis
     }
     if (type == RouteType::TRAIN || type == RouteType::TRAM) {
         if (!strcmp(railway, "rail") || !strcmp(railway, "light_rail") || !strcmp(railway, "tram") || !strcmp(railway, "subway")
-                || !strcmp(railway, "funicular") || !strcmp(railway, "preserved") || !strcmp(railway, "miniature")) {
+                || !strcmp(railway, "funicular") || !strcmp(railway, "preserved") || !strcmp(railway, "miniature") || !strcmp(railway, "narrow_gauge")) {
             return true;
         }
     }
