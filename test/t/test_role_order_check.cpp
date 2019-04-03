@@ -9,6 +9,8 @@
 #include "object_builder_utilities.hpp"
 
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -28,19 +30,23 @@ static osmium::item_type RELATION = osmium::item_type::relation;
 
 
 TEST_CASE("check valid simple bus route") {
-    std::string dataset_name = ".tmp-";
+    Options options;
+    options.output_directory = ".tmp-";
     srand (time(NULL));
-    dataset_name += std::to_string(rand());
-    dataset_name += "-testoutput.sqlite";
-    if (file_exists(dataset_name)) {
-        std::cerr << dataset_name << " already exists!\n";
+    options.output_directory += std::to_string(rand());
+    options.output_directory += "-testoutput.sqlite";
+    if (file_exists(options.output_directory)) {
+        std::cerr << options.output_directory << " already exists!\n";
         exit(1);
     }
-    Options options;
-    gdalcpp::Dataset dataset(options.output_format, dataset_name, gdalcpp::SRS(4326),
-            OGROutputBase::get_gdal_default_options(options.output_format));
+    if (mkdir(options.output_directory.c_str(), 0744) != 0) {
+        std::cerr << "Failed to create directory " << options.output_directory << '\n';
+        exit(1);
+    }
+
     osmium::util::VerboseOutput vout {false};
-    RouteWriter writer (dataset, options, vout);
+    OGRWriter ogr_writer{options, vout};
+    RouteWriter writer (ogr_writer, options, vout);
     PTv2Checker checker(writer);
 
     SECTION("simple route only containing ways and stops/platforms") {
@@ -161,8 +167,8 @@ TEST_CASE("check valid simple bus route") {
         }
     }
 
-    if (std::remove(dataset_name.c_str()) != 0) {
-        std::cerr << " deleting " << dataset_name << " after running the unit test failed!\n";
+    if (test_utils::delete_directory(options.output_directory.c_str()) != 0) {
+        std::cerr << " deleting " << options.output_directory << " after running the unit test failed!\n";
         exit(1);
     }
 }

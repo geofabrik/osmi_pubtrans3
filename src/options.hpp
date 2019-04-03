@@ -11,6 +11,7 @@
 struct Options {
     std::string location_index_type = "sparse_mem_array";
     std::string output_format = "SQlite";
+    std::string output_directory = "";
     int srs = 3857;
     bool verbose = false;
     bool crossings = true;

@@ -11,15 +11,16 @@
 #include <unordered_map>
 #include <memory>
 
+#include <osmium/handler.hpp>
 #include <osmium/storage/item_stash.hpp>
 
-#include "abstract_view_handler.hpp"
+#include "ogr_output_base.hpp"
 
 /**
  * This handler class creates the level crossings layer and populates the map of nodes which have
  * to be referenced by a way because their tags require it (signals, points, stop positions etc.).
  */
-class RailwayHandlerPass1 : public AbstractViewHandler {
+class RailwayHandlerPass1 : public osmium::handler::Handler, public OGROutputBase {
     /// item stash holds OSM objects to all nodes which have to be referenced by a way
     osmium::ItemStash& m_must_on_track;
 
@@ -64,9 +65,9 @@ class RailwayHandlerPass1 : public AbstractViewHandler {
 public:
     RailwayHandlerPass1() = delete;
 
-    RailwayHandlerPass1(gdalcpp::Dataset& dataset, Options& options,
-            osmium::util::VerboseOutput& verbose_output, osmium::ItemStash& signals,
-            std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& must_on_track_handles);
+    RailwayHandlerPass1(OGRWriter& writer, Options& options, osmium::util::VerboseOutput& verbose_output,
+            osmium::ItemStash& signals, std::unordered_map<osmium::object_id_type,
+            osmium::ItemStash::handle_type>& must_on_track_handles);
 
     void node(const osmium::Node& node);
 

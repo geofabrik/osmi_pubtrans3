@@ -78,7 +78,6 @@ inline RouteError operator&(const RouteError&a , const RouteError& b) {
  * the output dataset.
  */
 class RouteWriter : public OGROutputBase {
-    gdalcpp::Dataset& m_dataset;
     gdalcpp::Layer m_ptv2_routes_valid;
     gdalcpp::Layer m_ptv2_routes_invalid;
     gdalcpp::Layer m_ptv2_error_lines;
@@ -87,7 +86,7 @@ class RouteWriter : public OGROutputBase {
 public:
     RouteWriter() = delete;
 
-    RouteWriter(gdalcpp::Dataset& dataset, Options& options, osmium::util::VerboseOutput& verbose_output);
+    RouteWriter(OGRWriter& writer, Options& options, osmium::util::VerboseOutput& verbose_output);
 
     void write_valid_route(const osmium::Relation& relation, std::vector<const osmium::OSMObject*>& member_objects,
             std::vector<const char*>& roles);

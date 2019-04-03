@@ -12,6 +12,7 @@
 #ifndef TEST_INCLUDE_OBJECT_BUILDER_UTILITIES_HPP_
 #define TEST_INCLUDE_OBJECT_BUILDER_UTILITIES_HPP_
 
+#include <ftw.h>
 #include <map>
 #include <osmium/builder/osm_object_builder.hpp>
 #include <osmium/memory/buffer.hpp>
@@ -129,6 +130,18 @@ namespace test_utils {
         train_route_tags.emplace("route", "light_rail");
         train_route_tags.emplace("public_transport:version", "2");
         return train_route_tags;
+    }
+
+    int delete_file(const char* path, const struct stat*, int, struct FTW*) {
+        int result = remove(path);
+        if (result) {
+            std::cerr << "Failed to delete " << path << '\n';
+        }
+        return result;
+    }
+
+    int delete_directory(const char* dirpath) {
+        return nftw(dirpath, &delete_file, 64, FTW_DEPTH | FTW_PHYS);
     }
 
 }

@@ -8,14 +8,13 @@
 #include <ogr_core.h>
 #include "route_writer.hpp"
 
-RouteWriter::RouteWriter(gdalcpp::Dataset& dataset, Options& options,
+RouteWriter::RouteWriter(OGRWriter& writer, Options& options,
     osmium::util::VerboseOutput& verbose_output) :
-        OGROutputBase(verbose_output, options),
-        m_dataset(dataset),
-        m_ptv2_routes_valid(dataset, "ptv2_routes_valid", wkbMultiLineString, GDAL_DEFAULT_OPTIONS),
-        m_ptv2_routes_invalid(dataset, "ptv2_routes_invalid", wkbMultiLineString, GDAL_DEFAULT_OPTIONS),
-        m_ptv2_error_lines(dataset, "ptv2_error_lines", wkbLineString, GDAL_DEFAULT_OPTIONS),
-        m_ptv2_error_points(dataset, "ptv2_error_points", wkbPoint, GDAL_DEFAULT_OPTIONS) {
+        OGROutputBase(writer, verbose_output, options),
+        m_ptv2_routes_valid(m_writer.create_layer("ptv2_routes_valid", wkbMultiLineString, GDAL_DEFAULT_OPTIONS)),
+        m_ptv2_routes_invalid(m_writer.create_layer("ptv2_routes_invalid", wkbMultiLineString, GDAL_DEFAULT_OPTIONS)),
+        m_ptv2_error_lines(m_writer.create_layer("ptv2_error_lines", wkbLineString, GDAL_DEFAULT_OPTIONS)),
+        m_ptv2_error_points(m_writer.create_layer("ptv2_error_points", wkbPoint, GDAL_DEFAULT_OPTIONS)) {
     m_ptv2_routes_valid.add_field("from", OFTString, MAX_FIELD_LENGTH);
     m_ptv2_routes_valid.add_field("to", OFTString, MAX_FIELD_LENGTH);
     m_ptv2_routes_valid.add_field("via", OFTString, MAX_FIELD_LENGTH);

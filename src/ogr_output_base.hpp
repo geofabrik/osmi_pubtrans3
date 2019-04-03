@@ -34,6 +34,7 @@
 #include <osmium/util/verbose_output.hpp>
 
 #include "options.hpp"
+#include "ogr_writer.hpp"
 
 /**
  * Provide commont things for working with GDAL. This class does not care for the dataset
@@ -41,6 +42,8 @@
  */
 class OGROutputBase {
 protected:
+    OGRWriter& m_writer;
+
     /**
      * If ONLYMERCATOROUTPUT is defined, output coordinates are always Web
      * Mercator coordinates. If it is not defined, we will transform them if
@@ -67,7 +70,7 @@ protected:
 public:
     OGROutputBase() = delete;
 
-    OGROutputBase(osmium::util::VerboseOutput& verbose_output, Options& options);
+    OGROutputBase(OGRWriter& writer, osmium::util::VerboseOutput& verbose_output, Options& options);
 
     /**
      * \brief Add default options for the to the back of a vector of options.

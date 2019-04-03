@@ -8,14 +8,14 @@
 #include "railway_handler_pass1.hpp"
 #include <iostream>
 
-RailwayHandlerPass1::RailwayHandlerPass1(gdalcpp::Dataset& dataset, Options& options,
+RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         osmium::util::VerboseOutput& verbose_output, osmium::ItemStash& signals,
         std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& must_on_track_handles) :
-        AbstractViewHandler(dataset, options, verbose_output),
+        OGROutputBase(writer, verbose_output, options),
         m_must_on_track(signals),
         m_must_on_track_handles(must_on_track_handles) {
     if (options.crossings) {
-        m_crossings.reset(new gdalcpp::Layer(dataset, "crossings", wkbPoint, GDAL_DEFAULT_OPTIONS));
+        m_crossings = m_writer.create_layer_ptr("crossings", wkbPoint, GDAL_DEFAULT_OPTIONS);
         // add fields to layers
         m_crossings->add_field("node_id", OFTString, 10);
         m_crossings->add_field("lastchange", OFTString, 21);
@@ -23,7 +23,7 @@ RailwayHandlerPass1::RailwayHandlerPass1(gdalcpp::Dataset& dataset, Options& opt
         m_crossings->add_field("lights", OFTString, 50);
     }
     if (options.stops) {
-        m_stops.reset(new gdalcpp::Layer(dataset, "stops", wkbPoint, GDAL_DEFAULT_OPTIONS));
+        m_stops = m_writer.create_layer_ptr("stops", wkbPoint, GDAL_DEFAULT_OPTIONS);
         // add fields to layers
         m_stops->add_field("node_id", OFTString, 10);
         m_stops->add_field("lastchange", OFTString, 21);
@@ -37,7 +37,7 @@ RailwayHandlerPass1::RailwayHandlerPass1(gdalcpp::Dataset& dataset, Options& opt
         m_stops->add_field("network", OFTString, 100);
     }
     if (options.platforms) {
-        m_platforms.reset(new gdalcpp::Layer(dataset, "platforms", wkbPoint, GDAL_DEFAULT_OPTIONS));
+        m_platforms = m_writer.create_layer_ptr("platforms", wkbPoint, GDAL_DEFAULT_OPTIONS);
         // add fields to layers
         m_platforms->add_field("node_id", OFTString, 10);
         m_platforms->add_field("lastchange", OFTString, 21);
@@ -49,7 +49,7 @@ RailwayHandlerPass1::RailwayHandlerPass1(gdalcpp::Dataset& dataset, Options& opt
         m_platforms->add_field("local_ref", OFTString, 25);
         m_platforms->add_field("operator", OFTString, 100);
         m_platforms->add_field("network", OFTString, 100);
-        m_platforms_l.reset(new gdalcpp::Layer(dataset, "platforms_l", wkbLineString, GDAL_DEFAULT_OPTIONS));
+        m_platforms_l = m_writer.create_layer_ptr("platforms_l", wkbLineString, GDAL_DEFAULT_OPTIONS);
         m_platforms_l->add_field("way_id", OFTString, 10);
         m_platforms_l->add_field("lastchange", OFTString, 21);
         m_platforms_l->add_field("name", OFTString, 21);
@@ -62,7 +62,7 @@ RailwayHandlerPass1::RailwayHandlerPass1(gdalcpp::Dataset& dataset, Options& opt
         m_platforms_l->add_field("network", OFTString, 100);
     }
     if (options.stations) {
-        m_stations.reset(new gdalcpp::Layer(dataset, "stations", wkbPoint, GDAL_DEFAULT_OPTIONS));
+        m_stations = m_writer.create_layer_ptr("stations", wkbPoint, GDAL_DEFAULT_OPTIONS);
         // add fields to layers
         m_stations->add_field("node_id", OFTString, 10);
         m_stations->add_field("lastchange", OFTString, 21);
@@ -73,7 +73,7 @@ RailwayHandlerPass1::RailwayHandlerPass1(gdalcpp::Dataset& dataset, Options& opt
         m_stations->add_field("amenity", OFTString, 50);
         m_stations->add_field("operator", OFTString, 100);
         m_stations->add_field("network", OFTString, 100);
-        m_stations_l.reset(new gdalcpp::Layer(dataset, "stations_l", wkbLineString, GDAL_DEFAULT_OPTIONS));
+        m_stations_l = m_writer.create_layer_ptr("stations_l", wkbLineString, GDAL_DEFAULT_OPTIONS);
         m_stations_l->add_field("way_id", OFTString, 10);
         m_stations_l->add_field("lastchange", OFTString, 21);
         m_stations_l->add_field("name", OFTString, 100);
@@ -85,7 +85,7 @@ RailwayHandlerPass1::RailwayHandlerPass1(gdalcpp::Dataset& dataset, Options& opt
         m_stations_l->add_field("network", OFTString, 100);
     }
     if (options.stops || options.platforms) {
-        m_stops_only_highway.reset(new gdalcpp::Layer(dataset, "stops_only_highway", wkbPoint, GDAL_DEFAULT_OPTIONS));
+        m_stops_only_highway = m_writer.create_layer_ptr("stops_only_highway", wkbPoint, GDAL_DEFAULT_OPTIONS);
         // add fields to layers
         m_stops_only_highway->add_field("node_id", OFTString, 10);
         m_stops_only_highway->add_field("lastchange", OFTString, 21);

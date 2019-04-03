@@ -10,8 +10,8 @@
 #include "route_manager.hpp"
 
 
-RouteManager::RouteManager(gdalcpp::Dataset& dataset, Options& options, osmium::util::VerboseOutput& verbose_output) :
-        m_writer(dataset, options, verbose_output),
+RouteManager::RouteManager(OGRWriter& ogr_writer, Options& options, osmium::util::VerboseOutput& verbose_output) :
+        m_writer(ogr_writer, options, verbose_output),
         m_checker(m_writer) { }
 
 bool RouteManager::new_relation(const osmium::Relation& relation) const noexcept {

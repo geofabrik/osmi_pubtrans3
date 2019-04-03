@@ -11,16 +11,17 @@
 #include <unordered_map>
 #include <memory>
 
+#include <osmium/handler.hpp>
 #include <osmium/index/id_set.hpp>
 #include <osmium/storage/item_stash.hpp>
 
-#include "abstract_view_handler.hpp"
+#include "ogr_output_base.hpp"
 
 /**
  * This handler class creates the points layer (`railway=switch`) and
  * the layer of nodes which should be referenced by a way due to their tags (signals, points, stop positions etc.).
  */
-class RailwayHandlerPass2 : public AbstractViewHandler {
+class RailwayHandlerPass2 : public osmium::handler::Handler, public OGROutputBase {
 
     /// The map holds the handles which point to the objects in the ItemStash and makes them accessible by their OSM ID.
     std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& m_must_on_track_handles;
@@ -44,10 +45,9 @@ class RailwayHandlerPass2 : public AbstractViewHandler {
 public:
     RailwayHandlerPass2() = delete;
 
-    RailwayHandlerPass2(osmium::index::IdSetDense<osmium::unsigned_object_id_type>& via_nodes,
+    RailwayHandlerPass2(OGRWriter& writer, osmium::index::IdSetDense<osmium::unsigned_object_id_type>& via_nodes,
             std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& must_on_track_handles,
-            osmium::ItemStash& must_on_track, gdalcpp::Dataset& dataset, Options& options,
-            osmium::util::VerboseOutput& verbose_output);
+            osmium::ItemStash& must_on_track, Options& options, osmium::util::VerboseOutput& verbose_output);
 
     void node(const osmium::Node& node);
 

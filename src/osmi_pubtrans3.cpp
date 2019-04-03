@@ -21,16 +21,17 @@
 #include <osmium/relations/manager_util.hpp>
 #include <osmium/visitor.hpp>
 
+#include "ogr_writer.hpp"
 #include "railway_handler_pass1.hpp"
-#include "turn_restriction_handler.hpp"
 #include "railway_handler_pass2.hpp"
 #include "route_manager.hpp"
+#include "turn_restriction_handler.hpp"
 
 using index_type = osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Location>;
 using location_handler_type = osmium::handler::NodeLocationsForWays<index_type>;
 
 void print_help(char* arg0) {
-    std::cerr << "Usage: " << arg0 << " [OPTIONS] INFILE OUTFILE\n" \
+    std::cerr << "Usage: " << arg0 << " [OPTIONS] INFILE OUTPUT_DIRECTORY\n" \
               << "General Options:\n" \
               << "  -h, --help           This help message.\n" \
               << "  -f, --format         Output format (default: SQlite)\n" \
@@ -145,11 +146,10 @@ int main(int argc, char* argv[]) {
     }
 
     std::string input_filename;
-    std::string output_filename;
     int remaining_args = argc - optind;
     if (remaining_args == 2) {
         input_filename =  argv[optind];
-        output_filename = argv[optind+1];
+        options.output_directory = argv[optind+1];
     } else if (remaining_args == 1) {
         input_filename =  argv[optind];
     } else {
@@ -159,10 +159,8 @@ int main(int argc, char* argv[]) {
     const auto& map_factory = osmium::index::MapFactory<osmium::unsigned_object_id_type, osmium::Location>::instance();
 
     osmium::util::VerboseOutput verbose_output(options.verbose);
-    gdalcpp::Dataset dataset(options.output_format, output_filename, gdalcpp::SRS(options.srs),
-            OGROutputBase::get_gdal_default_options(options.output_format));
-
-    RouteManager route_manager(dataset, options, verbose_output);
+    OGRWriter writer {options, verbose_output};
+    RouteManager route_manager(writer, options, verbose_output);
 
     {
         verbose_output << "Pass 1 (reading route relations) ...";
@@ -180,7 +178,7 @@ int main(int argc, char* argv[]) {
     {
         auto location_index = map_factory.create_map(options.location_index_type);
         location_handler_type location_handler(*location_index);
-        RailwayHandlerPass1 railway_handler1(dataset, options, verbose_output, must_on_track, must_on_track_handles);
+        RailwayHandlerPass1 railway_handler1(writer, options, verbose_output, must_on_track, must_on_track_handles);
 
         verbose_output << "Pass 2 ...";
         osmium::io::Reader reader1(input_filename);
@@ -198,13 +196,14 @@ int main(int argc, char* argv[]) {
         reader1.close();
     }
 
-    RailwayHandlerPass2 railway_handler2(point_node_members, must_on_track_handles, must_on_track, dataset, options, verbose_output);
+    RailwayHandlerPass2 railway_handler2(writer, point_node_members, must_on_track_handles, must_on_track, options, verbose_output);
     verbose_output << "Pass 3 ...";
     osmium::io::Reader reader2(input_filename, osmium::osm_entity_bits::node | osmium::osm_entity_bits::way);
     osmium::apply(reader2, railway_handler2);
     railway_handler2.after_ways();
     must_on_track.clear();
     must_on_track.garbage_collect();
+    writer.rename_output_files("pubtrans");
     verbose_output << " done\n";
-    verbose_output << "wrote output to " << output_filename << "\n";
+    verbose_output << "wrote output to " << options.output_directory << "\n";
 }

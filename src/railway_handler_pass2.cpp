@@ -7,19 +7,18 @@
 
 #include "railway_handler_pass2.hpp"
 
-RailwayHandlerPass2::RailwayHandlerPass2(osmium::index::IdSetDense<osmium::unsigned_object_id_type>& via_nodes,
+RailwayHandlerPass2::RailwayHandlerPass2(OGRWriter& writer, osmium::index::IdSetDense<osmium::unsigned_object_id_type>& via_nodes,
         std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& must_on_track_handles,
-        osmium::ItemStash& must_on_track, gdalcpp::Dataset& dataset, Options& options,
-        osmium::util::VerboseOutput& verbose_output) :
-        AbstractViewHandler(dataset, options, verbose_output),
+        osmium::ItemStash& must_on_track, Options& options, osmium::util::VerboseOutput& verbose_output) :
+        OGROutputBase(writer, verbose_output, options),
         m_must_on_track_handles(must_on_track_handles),
         m_must_on_track(must_on_track),
         m_via_nodes(via_nodes),
         m_options(options),
-        m_on_track(dataset, "on_track", wkbPoint, GDAL_DEFAULT_OPTIONS) {
+        m_on_track(m_writer.create_layer("on_track", wkbPoint, GDAL_DEFAULT_OPTIONS)) {
     // add fields to layers
     if (options.points) {
-        m_points.reset(new gdalcpp::Layer(dataset, "points", wkbPoint, GDAL_DEFAULT_OPTIONS));
+        m_points = m_writer.create_layer_ptr("points", wkbPoint, GDAL_DEFAULT_OPTIONS);
         m_points->add_field("node_id", OFTString, 10);
         m_points->add_field("lastchange", OFTString, 21);
         m_points->add_field("type", OFTString, 50);
@@ -113,3 +112,4 @@ void RailwayHandlerPass2::after_ways() {
 }
 
 void RailwayHandlerPass2::relation(const osmium::Relation&) {}
+

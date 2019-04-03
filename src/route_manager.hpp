@@ -25,7 +25,7 @@ class RouteManager : public osmium::relations::RelationsManager<RouteManager, tr
 public:
     RouteManager() = delete;
 
-    RouteManager(gdalcpp::Dataset& dataset, Options& options, osmium::util::VerboseOutput& verbose_output);
+    RouteManager(OGRWriter& ogr_writer, Options& options, osmium::util::VerboseOutput& verbose_output);
 
     bool new_relation(const osmium::Relation& relation) const noexcept;
 

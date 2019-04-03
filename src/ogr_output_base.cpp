@@ -20,7 +20,8 @@
 
 #include "ogr_output_base.hpp"
 
-OGROutputBase::OGROutputBase(osmium::util::VerboseOutput& verbose_output, Options& options) :
+OGROutputBase::OGROutputBase(OGRWriter& writer, osmium::util::VerboseOutput& verbose_output, Options& options) :
+        m_writer(writer),
 #ifndef ONLYMERCATOROUTPUT
         m_factory(osmium::geom::Projection(options.srs)),
 #endif
