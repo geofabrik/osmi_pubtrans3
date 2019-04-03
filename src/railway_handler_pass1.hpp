@@ -46,8 +46,8 @@ class RailwayHandlerPass1 : public osmium::handler::Handler, public OGROutputBas
 
     void handle_crossing(const osmium::Node& node);
 
-    void add_crossing_node(const osmium::Node& node, const char* third_field_name,
-            const char* third_field_value, const char* fourth_field_name, const char* fourth_field_value);
+    void add_crossing_node(const osmium::Node& node, const int third_field_index,
+            const char* third_field_value, const int fourth_field_index, const char* fourth_field_value);
 
     void handle_stop(const osmium::OSMObject& object, const char* public_transport, const char* railway);
 
@@ -63,6 +63,7 @@ class RailwayHandlerPass1 : public osmium::handler::Handler, public OGROutputBas
     static void set_way_id(gdalcpp::Feature& feature, const osmium::Way& way);
 
 public:
+
     RailwayHandlerPass1() = delete;
 
     RailwayHandlerPass1(OGRWriter& writer, Options& options, osmium::util::VerboseOutput& verbose_output,

@@ -7,6 +7,15 @@
 
 #include "railway_handler_pass2.hpp"
 
+/// indexes of fields
+struct FieldIndexes {
+    static constexpr int node_id = 0;
+    static constexpr int lastchange = 1;
+    static constexpr int type = 2;
+    static constexpr int ref = 3;
+    static constexpr int error = 3;
+};
+
 RailwayHandlerPass2::RailwayHandlerPass2(OGRWriter& writer, osmium::index::IdSetDense<osmium::unsigned_object_id_type>& via_nodes,
         std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& must_on_track_handles,
         osmium::ItemStash& must_on_track, Options& options, osmium::util::VerboseOutput& verbose_output) :
@@ -44,27 +53,27 @@ void RailwayHandlerPass2::handle_point(const osmium::Node& node) {
     gdalcpp::Feature feature(*m_points, m_factory.create_point(node));
     static char idbuffer[20];
     sprintf(idbuffer, "%ld", node.id());
-    feature.set_field("node_id", idbuffer);
+    feature.set_field(FieldIndexes::node_id, idbuffer);
     std::string the_timestamp (node.timestamp().to_iso());
-    feature.set_field("lastchange", the_timestamp.c_str());
+    feature.set_field(FieldIndexes::lastchange, the_timestamp.c_str());
 
     const char* switch_type = node.get_value_by_key("railway:switch");
     if (switch_type && (!strcmp(switch_type, "default") || !strcmp(switch_type, "double_slip"))) {
-        feature.set_field("type", switch_type);
+        feature.set_field(FieldIndexes::type, switch_type);
     } else if (switch_type && !strcmp(switch_type, "single_slip")) {
         if (m_via_nodes.get(static_cast<osmium::unsigned_object_id_type>(node.id()))) {
-            feature.set_field("type", "single_slip");
+            feature.set_field(FieldIndexes::type, "single_slip");
         } else {
-            feature.set_field("type", "single_slip_incomplete");
+            feature.set_field(FieldIndexes::type, "single_slip_incomplete");
         }
     } else if (switch_type) {
-        feature.set_field("type", "UNKNOWN_VALUE");
+        feature.set_field(FieldIndexes::type, "UNKNOWN_VALUE");
     } else {
-        feature.set_field("type", "");
+        feature.set_field(FieldIndexes::type, "");
     }
 
     const char* ref = node.get_value_by_key("ref", "");
-    feature.set_field("ref", ref);
+    feature.set_field(FieldIndexes::ref, ref);
     feature.add_to_layer();
 }
 
@@ -98,14 +107,14 @@ void RailwayHandlerPass2::after_ways() {
         gdalcpp::Feature feature(m_on_track, m_factory.create_point(node));
         static char idbuffer[20];
         sprintf(idbuffer, "%ld", node.id());
-        feature.set_field("node_id", idbuffer);
+        feature.set_field(FieldIndexes::node_id, idbuffer);
         std::string the_timestamp (node.timestamp().to_iso());
-        feature.set_field("lastchange", the_timestamp.c_str());
-        feature.set_field("error", "not on a way");
+        feature.set_field(FieldIndexes::lastchange, the_timestamp.c_str());
+        feature.set_field(FieldIndexes::error, "not on a way");
         if (public_transport) {
-            feature.set_field("type", public_transport);
+            feature.set_field(FieldIndexes::type, public_transport);
         } else {
-            feature.set_field("type", railway);
+            feature.set_field(FieldIndexes::type, railway);
         }
         feature.add_to_layer();
     }

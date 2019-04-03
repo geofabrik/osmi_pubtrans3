@@ -8,6 +8,40 @@
 #include "railway_handler_pass1.hpp"
 #include <iostream>
 
+/// indexes of fields – all layers
+struct FieldIndexes {
+    static constexpr int node_id = 0;
+    static constexpr int way_id = 0;
+    static constexpr int lastchange = 1;
+};
+
+/// crossings layer
+struct CrossingIndexes {
+    static constexpr int barrier = 2;
+    static constexpr int lights = 3;
+};
+
+/// additional fields of the layers for stops, platforms and stations
+struct StopsPlatformsStationIndexes {
+    static constexpr int name = 2;
+    static constexpr int public_transport = 3;
+    static constexpr int railway = 4;
+    static constexpr int highway = 5;
+    static constexpr int _operator = 6;
+    static constexpr int network = 7;
+};
+
+/// additional fields of the layers for stops and platforms
+struct StopsPlatformsIndexes {
+    static constexpr int ref = 8;
+    static constexpr int local_ref = 9;
+};
+
+/// additional field of the station layer
+struct StationsIndexes {
+    static constexpr int amenity = 8;
+};
+
 RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         osmium::util::VerboseOutput& verbose_output, osmium::ItemStash& signals,
         std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& must_on_track_handles) :
@@ -31,10 +65,10 @@ RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         m_stops->add_field("public_transport", OFTString, 50);
         m_stops->add_field("railway", OFTString, 50);
         m_stops->add_field("highway", OFTString, 50);
-        m_stops->add_field("ref", OFTString, 50);
-        m_stops->add_field("local_ref", OFTString, 50);
         m_stops->add_field("operator", OFTString, 100);
         m_stops->add_field("network", OFTString, 100);
+        m_stops->add_field("ref", OFTString, 50);
+        m_stops->add_field("local_ref", OFTString, 50);
     }
     if (options.platforms) {
         m_platforms = m_writer.create_layer_ptr("platforms", wkbPoint, GDAL_DEFAULT_OPTIONS);
@@ -45,10 +79,10 @@ RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         m_platforms->add_field("public_transport", OFTString, 50);
         m_platforms->add_field("railway", OFTString, 50);
         m_platforms->add_field("highway", OFTString, 50);
-        m_platforms->add_field("ref", OFTString, 25);
-        m_platforms->add_field("local_ref", OFTString, 25);
         m_platforms->add_field("operator", OFTString, 100);
         m_platforms->add_field("network", OFTString, 100);
+        m_platforms->add_field("ref", OFTString, 25);
+        m_platforms->add_field("local_ref", OFTString, 25);
         m_platforms_l = m_writer.create_layer_ptr("platforms_l", wkbLineString, GDAL_DEFAULT_OPTIONS);
         m_platforms_l->add_field("way_id", OFTString, 10);
         m_platforms_l->add_field("lastchange", OFTString, 21);
@@ -56,10 +90,10 @@ RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         m_platforms_l->add_field("public_transport", OFTString, 50);
         m_platforms_l->add_field("railway", OFTString, 50);
         m_platforms_l->add_field("highway", OFTString, 50);
-        m_platforms_l->add_field("ref", OFTString, 25);
-        m_platforms_l->add_field("local_ref", OFTString, 25);
         m_platforms_l->add_field("operator", OFTString, 100);
         m_platforms_l->add_field("network", OFTString, 100);
+        m_platforms_l->add_field("ref", OFTString, 25);
+        m_platforms_l->add_field("local_ref", OFTString, 25);
     }
     if (options.stations) {
         m_stations = m_writer.create_layer_ptr("stations", wkbPoint, GDAL_DEFAULT_OPTIONS);
@@ -70,9 +104,9 @@ RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         m_stations->add_field("public_transport", OFTString, 50);
         m_stations->add_field("railway", OFTString, 50);
         m_stations->add_field("highway", OFTString, 50);
-        m_stations->add_field("amenity", OFTString, 50);
         m_stations->add_field("operator", OFTString, 100);
         m_stations->add_field("network", OFTString, 100);
+        m_stations->add_field("amenity", OFTString, 50);
         m_stations_l = m_writer.create_layer_ptr("stations_l", wkbLineString, GDAL_DEFAULT_OPTIONS);
         m_stations_l->add_field("way_id", OFTString, 10);
         m_stations_l->add_field("lastchange", OFTString, 21);
@@ -80,9 +114,9 @@ RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         m_stations_l->add_field("public_transport", OFTString, 50);
         m_stations_l->add_field("railway", OFTString, 50);
         m_stations_l->add_field("highway", OFTString, 50);
-        m_stations_l->add_field("amenity", OFTString, 50);
         m_stations_l->add_field("operator", OFTString, 100);
         m_stations_l->add_field("network", OFTString, 100);
+        m_stations_l->add_field("amenity", OFTString, 50);
     }
     if (options.stops || options.platforms) {
         m_stops_only_highway = m_writer.create_layer_ptr("stops_only_highway", wkbPoint, GDAL_DEFAULT_OPTIONS);
@@ -142,7 +176,7 @@ void RailwayHandlerPass1::handle_crossing(const osmium::Node& node) {
     } else {
         lights_value = lights;
     }
-    add_crossing_node(node, "barrier", barrier_value.c_str(), "lights", lights_value.c_str());
+    add_crossing_node(node, CrossingIndexes::barrier, barrier_value.c_str(), CrossingIndexes::lights, lights_value.c_str());
 }
 
 void RailwayHandlerPass1::handle_stop(const osmium::OSMObject& object, const char* public_transport, const char* railway) {
@@ -198,17 +232,17 @@ void RailwayHandlerPass1::way(const osmium::Way& way) {
     }
 }
 
-void RailwayHandlerPass1::add_crossing_node(const osmium::Node& node, const char* third_field_name,
-        const char* third_field_value, const char* fourth_field_name, const char* fourth_field_value) {
+void RailwayHandlerPass1::add_crossing_node(const osmium::Node& node, const int third_field_index,
+        const char* third_field_value, const int fourth_field_index, const char* fourth_field_value) {
     gdalcpp::Feature feature(*m_crossings, m_factory.create_point(node));
     set_node_id(feature, node);
     std::string the_timestamp (node.timestamp().to_iso());
-    feature.set_field("lastchange", the_timestamp.c_str());
-    if (third_field_name && third_field_value) {
-        feature.set_field(third_field_name, third_field_value);
+    feature.set_field(FieldIndexes::lastchange, the_timestamp.c_str());
+    if (third_field_value) {
+        feature.set_field(third_field_index, third_field_value);
     }
-    if (fourth_field_name && fourth_field_value) {
-        feature.set_field(fourth_field_name, fourth_field_value);
+    if (fourth_field_value) {
+        feature.set_field(fourth_field_index, fourth_field_value);
     }
     feature.add_to_layer();
 }
@@ -234,32 +268,32 @@ void RailwayHandlerPass1::add_stop_pltf_way(gdalcpp::Layer& layer, const osmium:
 /*static*/ void RailwayHandlerPass1::set_fields(gdalcpp::Feature& feature, const osmium::OSMObject& object,
         bool refs, bool amenity) {
     std::string the_timestamp (object.timestamp().to_iso());
-    feature.set_field("lastchange", the_timestamp.c_str());
-    feature.set_field("railway", object.get_value_by_key("railway", ""));
-    feature.set_field("public_transport", object.get_value_by_key("public_transport", ""));
-    feature.set_field("highway", object.get_value_by_key("highway", ""));
-    feature.set_field("name", object.get_value_by_key("name", ""));
-    feature.set_field("network", object.get_value_by_key("network", ""));
-    feature.set_field("operator", object.get_value_by_key("operator", ""));
+    feature.set_field(FieldIndexes::lastchange, the_timestamp.c_str());
+    feature.set_field(StopsPlatformsStationIndexes::railway, object.get_value_by_key("railway", ""));
+    feature.set_field(StopsPlatformsStationIndexes::public_transport, object.get_value_by_key("public_transport", ""));
+    feature.set_field(StopsPlatformsStationIndexes::highway, object.get_value_by_key("highway", ""));
+    feature.set_field(StopsPlatformsStationIndexes::name, object.get_value_by_key("name", ""));
+    feature.set_field(StopsPlatformsStationIndexes::network, object.get_value_by_key("network", ""));
+    feature.set_field(StopsPlatformsStationIndexes::_operator, object.get_value_by_key("operator", ""));
     if (refs) {
-        feature.set_field("ref", object.get_value_by_key("ref", ""));
-        feature.set_field("local_ref", object.get_value_by_key("local_ref", ""));
+        feature.set_field(StopsPlatformsIndexes::ref, object.get_value_by_key("ref", ""));
+        feature.set_field(StopsPlatformsIndexes::local_ref, object.get_value_by_key("local_ref", ""));
     }
     if (amenity) {
-        feature.set_field("amenity", object.get_value_by_key("amenity", ""));
+        feature.set_field(StationsIndexes::amenity, object.get_value_by_key("amenity", ""));
     }
 }
 
 /*static*/ void RailwayHandlerPass1::set_node_id(gdalcpp::Feature& feature, const osmium::Node& node) {
     static char idbuffer[20];
     sprintf(idbuffer, "%ld", node.id());
-    feature.set_field("node_id", idbuffer);
+    feature.set_field(FieldIndexes::node_id, idbuffer);
 }
 
 /*static*/ void RailwayHandlerPass1::set_way_id(gdalcpp::Feature& feature, const osmium::Way& way) {
     static char idbuffer[20];
     sprintf(idbuffer, "%ld", way.id());
-    feature.set_field("way_id", idbuffer);
+    feature.set_field(FieldIndexes::way_id, idbuffer);
 }
 
 void RailwayHandlerPass1::relation(const osmium::Relation&) {}
