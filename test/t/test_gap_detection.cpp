@@ -29,6 +29,7 @@ static osmium::item_type RELATION = osmium::item_type::relation;
 TEST_CASE("check if gap detection works") {
     Options options;
     options.output_directory = ".tmp-";
+    options.output_format = "GeoJSON";
     srand (time(NULL));
     options.output_directory += std::to_string(rand());
     options.output_directory += "-testoutput.sqlite";
