@@ -246,6 +246,56 @@ TEST_CASE("check if gap detection works") {
         }
     }
 
+    SECTION("roundabout test") {
+        std::vector<osmium::item_type> types = {NODE, NODE, NODE, WAY, WAY, WAY, WAY};
+        std::vector<std::string> roles = {"platform", "platform", "platform", "", "", "", ""};
+
+        std::map<std::string, std::string> stop_pos;
+        stop_pos.emplace("highway", "bus_stop");
+
+        std::map<std::string, std::string> tags1;
+        tags1.emplace("highway", "secondary");
+
+        std::map<std::string, std::string> tags_roundabout;
+        tags_roundabout.emplace("highway", "secondary");
+        tags_roundabout.emplace("junction", "roundabout");
+
+        static constexpr int buffer_size = 10 * 1000 * 1000;
+        osmium::memory::Buffer buffer(buffer_size);
+
+        std::map<std::string, std::string> tags_rel = test_utils::get_bus_route_tags();
+
+        std::vector<const osmium::NodeRef*> node_refs1 {new osmium::NodeRef(1), new osmium::NodeRef(2), new osmium::NodeRef(3), new osmium::NodeRef(4)};
+        std::vector<const osmium::NodeRef*> node_refs2 {new osmium::NodeRef(4), new osmium::NodeRef(5), new osmium::NodeRef(6), new osmium::NodeRef(13), new osmium::NodeRef(7)};
+        std::vector<const osmium::NodeRef*> node_refs3 {new osmium::NodeRef(7), new osmium::NodeRef(8), new osmium::NodeRef(9), new osmium::NodeRef(10), new osmium::NodeRef(11), new osmium::NodeRef(12), new osmium::NodeRef(7)};
+        std::vector<const osmium::NodeRef*> node_refs3a {new osmium::NodeRef(8), new osmium::NodeRef(9), new osmium::NodeRef(10), new osmium::NodeRef(11), new osmium::NodeRef(12), new osmium::NodeRef(7), new osmium::NodeRef(8)};
+
+        osmium::Way& way1 = test_utils::create_way(buffer, 1, node_refs1, tags1);
+        buffer.commit();
+        osmium::Way& way2 = test_utils::create_way(buffer, 2, node_refs2, tags1);
+        buffer.commit();
+        osmium::Way& way3 = test_utils::create_way(buffer, 3, node_refs3, tags_roundabout);
+        buffer.commit();
+        osmium::Way& way3a = test_utils::create_way(buffer, 4, node_refs3a, tags_roundabout);
+        buffer.commit();
+
+        SECTION("route makes u-turn at roundabout") {
+            std::vector<osmium::object_id_type> ids = {1, 2, 3, 1, 2, 3, 2};
+            std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, nullptr, &way1, &way2, &way3, &way2};
+
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
+            CHECK(checker.find_gaps(relation1, objects) == 0);
+        }
+
+        SECTION("route makes u-turn at roundabout but roundabout does not begin/end at entry point") {
+            std::vector<osmium::object_id_type> ids = {1, 2, 3, 1, 2, 4, 2};
+            std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, nullptr, &way1, &way2, &way3a, &way2};
+
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
+            CHECK(checker.find_gaps(relation1, objects) == 0);
+        }
+    }
+
     if (test_utils::delete_directory(options.output_directory.c_str()) != 0) {
         std::cerr << " deleting " << options.output_directory << " after running the unit test failed!\n";
         exit(1);
