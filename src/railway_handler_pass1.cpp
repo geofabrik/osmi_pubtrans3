@@ -49,7 +49,7 @@ RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         m_must_on_track(signals),
         m_must_on_track_handles(must_on_track_handles) {
     if (options.crossings) {
-        m_crossings = m_writer.create_layer_ptr("crossings", wkbPoint, GDAL_DEFAULT_OPTIONS);
+        m_crossings = m_writer.create_layer_ptr("crossings", wkbPoint);
         // add fields to layers
         m_crossings->add_field("node_id", OFTString, 10);
         m_crossings->add_field("lastchange", OFTString, 21);
@@ -57,7 +57,7 @@ RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         m_crossings->add_field("lights", OFTString, 50);
     }
     if (options.stops) {
-        m_stops = m_writer.create_layer_ptr("stops", wkbPoint, GDAL_DEFAULT_OPTIONS);
+        m_stops = m_writer.create_layer_ptr("stops", wkbPoint);
         // add fields to layers
         m_stops->add_field("node_id", OFTString, 10);
         m_stops->add_field("lastchange", OFTString, 21);
@@ -71,7 +71,7 @@ RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         m_stops->add_field("local_ref", OFTString, 50);
     }
     if (options.platforms) {
-        m_platforms = m_writer.create_layer_ptr("platforms", wkbPoint, GDAL_DEFAULT_OPTIONS);
+        m_platforms = m_writer.create_layer_ptr("platforms", wkbPoint);
         // add fields to layers
         m_platforms->add_field("node_id", OFTString, 10);
         m_platforms->add_field("lastchange", OFTString, 21);
@@ -83,7 +83,7 @@ RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         m_platforms->add_field("network", OFTString, 100);
         m_platforms->add_field("ref", OFTString, 25);
         m_platforms->add_field("local_ref", OFTString, 25);
-        m_platforms_l = m_writer.create_layer_ptr("platforms_l", wkbLineString, GDAL_DEFAULT_OPTIONS);
+        m_platforms_l = m_writer.create_layer_ptr("platforms_l", wkbLineString);
         m_platforms_l->add_field("way_id", OFTString, 10);
         m_platforms_l->add_field("lastchange", OFTString, 21);
         m_platforms_l->add_field("name", OFTString, 21);
@@ -96,7 +96,7 @@ RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         m_platforms_l->add_field("local_ref", OFTString, 25);
     }
     if (options.stations) {
-        m_stations = m_writer.create_layer_ptr("stations", wkbPoint, GDAL_DEFAULT_OPTIONS);
+        m_stations = m_writer.create_layer_ptr("stations", wkbPoint);
         // add fields to layers
         m_stations->add_field("node_id", OFTString, 10);
         m_stations->add_field("lastchange", OFTString, 21);
@@ -107,7 +107,7 @@ RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         m_stations->add_field("operator", OFTString, 100);
         m_stations->add_field("network", OFTString, 100);
         m_stations->add_field("amenity", OFTString, 50);
-        m_stations_l = m_writer.create_layer_ptr("stations_l", wkbLineString, GDAL_DEFAULT_OPTIONS);
+        m_stations_l = m_writer.create_layer_ptr("stations_l", wkbLineString);
         m_stations_l->add_field("way_id", OFTString, 10);
         m_stations_l->add_field("lastchange", OFTString, 21);
         m_stations_l->add_field("name", OFTString, 100);
@@ -119,7 +119,7 @@ RailwayHandlerPass1::RailwayHandlerPass1(OGRWriter& writer, Options& options,
         m_stations_l->add_field("amenity", OFTString, 50);
     }
     if (options.stops || options.platforms) {
-        m_stops_only_highway = m_writer.create_layer_ptr("stops_only_highway", wkbPoint, GDAL_DEFAULT_OPTIONS);
+        m_stops_only_highway = m_writer.create_layer_ptr("stops_only_highway", wkbPoint);
         // add fields to layers
         m_stops_only_highway->add_field("node_id", OFTString, 10);
         m_stops_only_highway->add_field("lastchange", OFTString, 21);

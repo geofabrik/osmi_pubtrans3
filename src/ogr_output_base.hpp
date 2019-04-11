@@ -60,8 +60,6 @@ protected:
     /// reference to output manager for STDERR
     osmium::util::VerboseOutput& m_verbose_output;
 
-    const std::vector<std::string> GDAL_DEFAULT_OPTIONS;
-
     Options& m_options;
 
     /// maximum length of a string field
@@ -71,18 +69,6 @@ public:
     OGROutputBase() = delete;
 
     OGROutputBase(OGRWriter& writer, osmium::util::VerboseOutput& verbose_output, Options& options);
-
-    /**
-     * \brief Add default options for the to the back of a vector of options.
-     *
-     * Default options are added at the *back* of the vector. If you read the vector in a later step
-     * to set them via the functions provided by the GDAL library, do it in reverse order. Otherwise
-     * the defaults will overwrite your explicitly set options.
-     *
-     * \param output_format output format
-     * \param gdal_options vector where to add the default options.
-     */
-    static std::vector<std::string> get_gdal_default_options(std::string& output_format);
 };
 
 #endif /* SRC_OGR_OUTPUT_BASE_HPP_ */

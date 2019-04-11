@@ -77,38 +77,47 @@ void OGRWriter::ensure_writeable_dataset(const char* layer_name) {
         output_filename += '/';
         output_filename += layer_name;
         std::unique_ptr<gdalcpp::Dataset> ds {new gdalcpp::Dataset(m_options.output_format,
-                output_filename, gdalcpp::SRS(m_options.srs), get_gdal_default_options(m_options.output_format))};
+                output_filename, gdalcpp::SRS(m_options.srs), get_gdal_default_dataset_options(m_options.output_format))};
         m_datasets.push_back(std::move(ds));
         m_datasets.back()->enable_auto_transactions(10000);
     }
 }
 
-gdalcpp::Layer OGRWriter::create_layer(const char* layer_name, OGRwkbGeometryType type,
-        const std::vector<std::string>& options /*= {}*/) {
+gdalcpp::Layer OGRWriter::create_layer(const char* layer_name, OGRwkbGeometryType type) {
     ensure_writeable_dataset(layer_name);
+    const std::vector<std::string>& options = get_gdal_default_layer_options(m_options.output_format);
     return gdalcpp::Layer(*(m_datasets.back()), layer_name, type, options);
 }
 
-std::unique_ptr<gdalcpp::Layer> OGRWriter::create_layer_ptr(const char* layer_name, OGRwkbGeometryType type,
-        const std::vector<std::string>& options /*= {}*/) {
+std::unique_ptr<gdalcpp::Layer> OGRWriter::create_layer_ptr(const char* layer_name, OGRwkbGeometryType type) {
     ensure_writeable_dataset(layer_name);
+    const std::vector<std::string>& options = get_gdal_default_layer_options(m_options.output_format);
     return std::unique_ptr<gdalcpp::Layer>{new gdalcpp::Layer(*(m_datasets.back()), layer_name, type, options)};
 }
 
-std::vector<std::string> OGRWriter::get_gdal_default_options(std::string& output_format) {
+std::vector<std::string> OGRWriter::get_gdal_default_dataset_options(std::string& output_format) {
     std::vector<std::string> default_options;
     // default layer creation options
     if (output_format == "SQlite") {
-        default_options.emplace_back("OGR_SQLITE_SYNCHRONOUS=OFF");
-        default_options.emplace_back("SPATIAL_INDEX=NO");
-        default_options.emplace_back("COMPRESS_GEOM=NO");
+        CPLSetConfigOption("OGR_SQLITE_PRAGMA", "journal_mode=OFF,TEMP_STORE=MEMORY,temp_store=memory,LOCKING_MODE=EXCLUSIVE");
+        CPLSetConfigOption("OGR_SQLITE_CACHE", "600");
+        CPLSetConfigOption("OGR_SQLITE_JOURNAL", "OFF");
+        CPLSetConfigOption("OGR_SQLITE_SYNCHRONOUS", "OFF");
         default_options.emplace_back("SPATIALITE=YES");
-////        CPLSetConfigOption("OGR_SQLITE_PRAGMA", "journal_mode=OFF,TEMP_STORE=MEMORY,temp_store=memory,LOCKING_MODE=EXCLUSIVE");
-////        CPLSetConfigOption("OGR_SQLITE_CACHE", "600");
-////        CPLSetConfigOption("OGR_SQLITE_JOURNAL", "OFF");
     } else if (output_format == "ESRI Shapefile") {
         default_options.emplace_back("SHAPE_ENCODING=UTF8");
     }
+    return default_options;
+}
 
+std::vector<std::string> OGRWriter::get_gdal_default_layer_options(std::string& output_format) {
+    std::vector<std::string> default_options;
+    // default layer creation options
+    if (output_format == "SQlite") {
+        default_options.emplace_back("SPATIAL_INDEX=NO");
+        default_options.emplace_back("COMPRESS_GEOM=NO");
+    } else if (output_format == "ESRI Shapefile") {
+        default_options.emplace_back("SHAPE_ENCODING=UTF8");
+    }
     return default_options;
 }

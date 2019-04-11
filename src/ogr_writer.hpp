@@ -56,6 +56,30 @@ private:
      */
     bool one_layer_per_datasource_only();
 
+    /**
+     * \brief Add default options for the to the back of a vector of options.
+     *
+     * Default dataset creation options are added at the *back* of the vector. If you read the vector in a later step
+     * to set them via the functions provided by the GDAL library, do it in reverse order. Otherwise
+     * the defaults will overwrite your explicitly set options.
+     *
+     * \param output_format output format
+     * \param gdal_options vector where to add the default options.
+     */
+    static std::vector<std::string> get_gdal_default_dataset_options(std::string& output_format);
+
+    /**
+     * \brief Add default options for the to the back of a vector of options.
+     *
+     * Default layer creation options are added at the *back* of the vector. If you read the vector in a later step
+     * to set them via the functions provided by the GDAL library, do it in reverse order. Otherwise
+     * the defaults will overwrite your explicitly set options.
+     *
+     * \param output_format output format
+     * \param gdal_options vector where to add the default options.
+     */
+    static std::vector<std::string> get_gdal_default_layer_options(std::string& output_format);
+
 public:
     OGRWriter() = delete;
 
@@ -69,23 +93,10 @@ public:
     void ensure_writeable_dataset(const char* layer_name);
 
     //TODO check if it is better to keep a vector of layers and return a reference only
-    gdalcpp::Layer create_layer(const char* layer_name, OGRwkbGeometryType type, const std::vector<std::string>& options = {});
+    gdalcpp::Layer create_layer(const char* layer_name, OGRwkbGeometryType type);
 
     //TODO check if it is better to keep a vector of layers and return a pointer on stack only
-    std::unique_ptr<gdalcpp::Layer> create_layer_ptr(const char* layer_name, OGRwkbGeometryType type,
-            const std::vector<std::string>& options = {});
-
-    /**
-     * \brief Add default options for the to the back of a vector of options.
-     *
-     * Default options are added at the *back* of the vector. If you read the vector in a later step
-     * to set them via the functions provided by the GDAL library, do it in reverse order. Otherwise
-     * the defaults will overwrite your explicitly set options.
-     *
-     * \param output_format output format
-     * \param gdal_options vector where to add the default options.
-     */
-    static std::vector<std::string> get_gdal_default_options(std::string& output_format);
+    std::unique_ptr<gdalcpp::Layer> create_layer_ptr(const char* layer_name, OGRwkbGeometryType type);
 };
 
 #endif /* SRC_OGR_WRITER_HPP_ */

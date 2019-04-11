@@ -24,10 +24,10 @@ RailwayHandlerPass2::RailwayHandlerPass2(OGRWriter& writer, osmium::index::IdSet
         m_must_on_track(must_on_track),
         m_via_nodes(via_nodes),
         m_options(options),
-        m_on_track(m_writer.create_layer("on_track", wkbPoint, GDAL_DEFAULT_OPTIONS)) {
+        m_on_track(m_writer.create_layer("on_track", wkbPoint)) {
     // add fields to layers
     if (options.points) {
-        m_points = m_writer.create_layer_ptr("points", wkbPoint, GDAL_DEFAULT_OPTIONS);
+        m_points = m_writer.create_layer_ptr("points", wkbPoint);
         m_points->add_field("node_id", OFTString, 10);
         m_points->add_field("lastchange", OFTString, 21);
         m_points->add_field("type", OFTString, 50);

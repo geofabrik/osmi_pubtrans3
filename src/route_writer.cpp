@@ -51,10 +51,10 @@ struct ErrorFieldIndexes {
 RouteWriter::RouteWriter(OGRWriter& writer, Options& options,
     osmium::util::VerboseOutput& verbose_output) :
         OGROutputBase(writer, verbose_output, options),
-        m_ptv2_routes_valid(m_writer.create_layer("ptv2_routes_valid", wkbMultiLineString, GDAL_DEFAULT_OPTIONS)),
-        m_ptv2_routes_invalid(m_writer.create_layer("ptv2_routes_invalid", wkbMultiLineString, GDAL_DEFAULT_OPTIONS)),
-        m_ptv2_error_lines(m_writer.create_layer("ptv2_error_lines", wkbLineString, GDAL_DEFAULT_OPTIONS)),
-        m_ptv2_error_points(m_writer.create_layer("ptv2_error_points", wkbPoint, GDAL_DEFAULT_OPTIONS)) {
+        m_ptv2_routes_valid(m_writer.create_layer("ptv2_routes_valid", wkbMultiLineString)),
+        m_ptv2_routes_invalid(m_writer.create_layer("ptv2_routes_invalid", wkbMultiLineString)),
+        m_ptv2_error_lines(m_writer.create_layer("ptv2_error_lines", wkbLineString)),
+        m_ptv2_error_points(m_writer.create_layer("ptv2_error_points", wkbPoint)) {
     m_ptv2_routes_valid.add_field("rel_id", OFTString, 10);
     m_ptv2_routes_valid.add_field("from", OFTString, MAX_FIELD_LENGTH);
     m_ptv2_routes_valid.add_field("to", OFTString, MAX_FIELD_LENGTH);
