@@ -42,9 +42,6 @@ void RouteManager::process_route(const osmium::Relation& relation) {
     roles.reserve(relation.members().size());
     for (const osmium::RelationMember& member : relation.members()) {
         const osmium::OSMObject* object = this->get_member_object(member);
-        if (!m_writer.coordinates_valid(*object)) {
-            continue;
-        }
         member_objects.push_back(object);
         roles.push_back(member.role());
     }

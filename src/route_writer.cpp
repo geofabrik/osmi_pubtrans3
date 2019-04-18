@@ -121,6 +121,9 @@ void RouteWriter::write_valid_route(const osmium::Relation& relation, std::vecto
             continue;
         }
         const osmium::Way* way = static_cast<const osmium::Way*>(member);
+        if (!coordinates_valid(way->nodes())) {
+            continue;
+        }
         try {
             std::unique_ptr<OGRLineString> geom = m_factory.create_linestring(*way);
             ml->addGeometry(geom.get());
@@ -154,6 +157,9 @@ void RouteWriter::write_invalid_route(const osmium::Relation& relation, std::vec
             continue;
         }
         const osmium::Way* way = static_cast<const osmium::Way*>(member);
+        if (!coordinates_valid(way->nodes())) {
+            continue;
+        }
         try {
             std::unique_ptr<OGRLineString> geom = m_factory.create_linestring(*way);
             ml->addGeometry(geom.get());
@@ -221,6 +227,9 @@ void RouteWriter::write_error_way(const osmium::Relation&, const osmium::object_
 #else
 void RouteWriter::write_error_way(const osmium::Relation& relation, const osmium::object_id_type node_ref,
         const char* error_text, const osmium::Way* way) {
+    if (!coordinates_valid(way->nodes())) {
+        return;
+    }
     try {
         gdalcpp::Feature feature(m_ptv2_error_lines, m_factory.create_linestring(*way));
         static char way_idbuffer[20];
@@ -258,6 +267,9 @@ void RouteWriter::write_error_point(const osmium::Relation&, const osmium::objec
 #else
 void RouteWriter::write_error_point(const osmium::Relation& relation, const osmium::object_id_type node_ref,
         const osmium::Location& location, const char* error_text, const osmium::object_id_type way_id) {
+    if (!coordinates_valid(location)) {
+        return;
+    }
     gdalcpp::Feature feature(m_ptv2_error_points, m_factory.create_point(location));
     static char way_idbuffer[20];
     sprintf(way_idbuffer, "%ld", way_id);
