@@ -27,3 +27,19 @@ OGROutputBase::OGROutputBase(OGRWriter& writer, osmium::util::VerboseOutput& ver
 #endif
         m_verbose_output(verbose_output),
         m_options(options) { }
+
+OGRWriter& OGROutputBase::writer() {
+    return m_writer;
+}
+
+const Options& OGROutputBase::options() {
+    return m_options;
+}
+
+ogr_factory_type& OGROutputBase::factory() {
+    return m_factory;
+}
+
+osmium::util::VerboseOutput& OGROutputBase::verbose_output() {
+    return m_verbose_output;
+}

@@ -41,7 +41,11 @@ void RouteManager::process_route(const osmium::Relation& relation) {
     member_objects.reserve(relation.members().size());
     roles.reserve(relation.members().size());
     for (const osmium::RelationMember& member : relation.members()) {
-        member_objects.push_back(this->get_member_object(member));
+        const osmium::OSMObject* object = this->get_member_object(member);
+        if (!m_writer.coordinates_valid(*object)) {
+            continue;
+        }
+        member_objects.push_back(object);
         roles.push_back(member.role());
     }
     if (is_ptv2(relation)) {

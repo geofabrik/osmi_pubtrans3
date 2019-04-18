@@ -36,11 +36,20 @@
 #include "options.hpp"
 #include "ogr_writer.hpp"
 
+#ifdef ONLYMERCATOROUTPUT
+    /// factory to build OGR geometries in Web Mercator projection
+    using ogr_factory_type = osmium::geom::OGRFactory<osmium::geom::MercatorProjection>;
+#else
+    /// factory to build OGR geometries with a coordinate transformation if necessary
+    using ogr_factory_type = osmium::geom::OGRFactory<osmium::geom::Projection>;
+#endif
+
 /**
  * Provide commont things for working with GDAL. This class does not care for the dataset
  * because the dataset is shared.
  */
 class OGROutputBase {
+
 protected:
     OGRWriter& m_writer;
 
@@ -49,13 +58,8 @@ protected:
      * Mercator coordinates. If it is not defined, we will transform them if
      * the output SRS is different from the input SRS (4326).
      */
-#ifdef ONLYMERCATOROUTPUT
-    /// factory to build OGR geometries in Web Mercator projection
-    osmium::geom::OGRFactory<osmium::geom::MercatorProjection> m_factory;
-#else
-    /// factory to build OGR geometries with a coordinate transformation if necessary
-    osmium::geom::OGRFactory<osmium::geom::Projection> m_factory;
-#endif
+
+    ogr_factory_type m_factory;
 
     /// reference to output manager for STDERR
     osmium::util::VerboseOutput& m_verbose_output;
@@ -65,10 +69,59 @@ protected:
     /// maximum length of a string field
     static constexpr size_t MAX_FIELD_LENGTH = 254;
 
+    static constexpr double UPPER_LIMIT_LATITUDE = 90.0;
+
 public:
     OGROutputBase() = delete;
 
     OGROutputBase(OGRWriter& writer, osmium::util::VerboseOutput& verbose_output, Options& options);
+
+    OGRWriter& writer();
+
+    const Options& options();
+
+    ogr_factory_type& factory();
+
+    osmium::util::VerboseOutput& verbose_output();
+
+    inline bool coordinates_valid(const osmium::Location& location) {
+#ifdef ONLYMERCATOROUTPUT
+        return location.valid() && location.lat() < UPPER_LIMIT_LATITUDE && location.lat() > -UPPER_LIMIT_LATITUDE;
+#else
+        return location.valid() && (
+                   m_options.srs != 3857 ||
+                   (location.lat() < UPPER_LIMIT_LATITUDE && location.lat() > -UPPER_LIMIT_LATITUDE)
+               );
+#endif
+    }
+
+    inline bool coordinates_valid(const osmium::Node& node) {
+        return coordinates_valid(node.location());
+    }
+
+    inline bool coordinates_valid(const osmium::NodeRefList& nl) {
+        for (auto& nr : nl) {
+            if (!coordinates_valid(nr.location())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    inline bool coordinates_valid(const osmium::Way& way) {
+        return coordinates_valid(way.nodes());
+    }
+
+    inline bool coordinates_valid(const osmium::OSMObject& object) {
+        switch (object.type()) {
+        case osmium::item_type::node :
+            return coordinates_valid(static_cast<const osmium::Node&>(object));
+        case osmium::item_type::way :
+            return coordinates_valid(static_cast<const osmium::Way&>(object));
+        default :
+            return false;
+        }
+    }
 };
 
 #endif /* SRC_OGR_OUTPUT_BASE_HPP_ */

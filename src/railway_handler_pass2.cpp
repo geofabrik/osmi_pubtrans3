@@ -19,15 +19,15 @@ struct FieldIndexes {
 RailwayHandlerPass2::RailwayHandlerPass2(OGRWriter& writer, osmium::index::IdSetDense<osmium::unsigned_object_id_type>& via_nodes,
         std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& must_on_track_handles,
         osmium::ItemStash& must_on_track, Options& options, osmium::util::VerboseOutput& verbose_output) :
-        OGROutputBase(writer, verbose_output, options),
+        m_output(writer, verbose_output, options),
         m_must_on_track_handles(must_on_track_handles),
         m_must_on_track(must_on_track),
         m_via_nodes(via_nodes),
         m_options(options),
-        m_on_track(m_writer.create_layer("on_track", wkbPoint)) {
+        m_on_track(m_output.writer().create_layer("on_track", wkbPoint)) {
     // add fields to layers
     if (options.points) {
-        m_points = m_writer.create_layer_ptr("points", wkbPoint);
+        m_points = m_output.writer().create_layer_ptr("points", wkbPoint);
         m_points->add_field("node_id", OFTString, 10);
         m_points->add_field("lastchange", OFTString, 21);
         m_points->add_field("type", OFTString, 50);
@@ -50,7 +50,10 @@ void RailwayHandlerPass2::node(const osmium::Node& node) {
 }
 
 void RailwayHandlerPass2::handle_point(const osmium::Node& node) {
-    gdalcpp::Feature feature(*m_points, m_factory.create_point(node));
+    if (!m_output.coordinates_valid(node)) {
+        return;
+    }
+    gdalcpp::Feature feature(*m_points, m_output.factory().create_point(node));
     static char idbuffer[20];
     sprintf(idbuffer, "%ld", node.id());
     feature.set_field(FieldIndexes::node_id, idbuffer);
@@ -101,10 +104,10 @@ void RailwayHandlerPass2::after_ways() {
         } else if (railway && !public_transport && !m_options.points) {
             continue;
         }
-        if (!node.location().valid()) {
+        if (!m_output.coordinates_valid(node)) {
             continue;
         }
-        gdalcpp::Feature feature(m_on_track, m_factory.create_point(node));
+        gdalcpp::Feature feature(m_on_track, m_output.factory().create_point(node));
         static char idbuffer[20];
         sprintf(idbuffer, "%ld", node.id());
         feature.set_field(FieldIndexes::node_id, idbuffer);

@@ -20,7 +20,9 @@
  * This handler class creates the level crossings layer and populates the map of nodes which have
  * to be referenced by a way because their tags require it (signals, points, stop positions etc.).
  */
-class RailwayHandlerPass1 : public osmium::handler::Handler, public OGROutputBase {
+class RailwayHandlerPass1 : public osmium::handler::Handler {
+    OGROutputBase m_output;
+
     /// item stash holds OSM objects to all nodes which have to be referenced by a way
     osmium::ItemStash& m_must_on_track;
 

@@ -21,7 +21,9 @@
  * This handler class creates the points layer (`railway=switch`) and
  * the layer of nodes which should be referenced by a way due to their tags (signals, points, stop positions etc.).
  */
-class RailwayHandlerPass2 : public osmium::handler::Handler, public OGROutputBase {
+class RailwayHandlerPass2 : public osmium::handler::Handler {
+
+    OGROutputBase m_output;
 
     /// The map holds the handles which point to the objects in the ItemStash and makes them accessible by their OSM ID.
     std::unordered_map<osmium::object_id_type, osmium::ItemStash::handle_type>& m_must_on_track_handles;
