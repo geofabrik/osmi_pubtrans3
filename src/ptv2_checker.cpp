@@ -89,7 +89,8 @@ bool PTv2Checker::check_valid_road_way(const osmium::TagList& member_tags) {
         || !strcmp(highway, "secondary") || !strcmp(highway, "secondary_link") || !strcmp(highway, "tertiary")
         || !strcmp(highway, "tertiary_link") || !strcmp(highway, "unclassified") || !strcmp(highway, "residential")
         || !strcmp(highway, "service") || !strcmp(highway, "track") || !strcmp(highway, "pedestrian")
-        || !strcmp(highway, "living_street"));
+        || !strcmp(highway, "living_street") || !strcmp(highway, "bus_guideway")
+       );
 }
 
 bool PTv2Checker::check_valid_trolleybus_way(const osmium::TagList& member_tags) {
