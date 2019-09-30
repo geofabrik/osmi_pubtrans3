@@ -166,7 +166,7 @@ RouteError PTv2Checker::is_way_usable(const osmium::Relation& relation, RouteTyp
         break;
     case RouteType::FERRY:
         if (!is_ferry(way->tags(), true)) {
-            m_writer.write_error_way(relation, 0, "trolley bus without trolley wire", way);
+            m_writer.write_error_way(relation, 0, "ferry over ways other than route=ferry", way);
             return RouteError::NO_FERRY;
         }
         break;
