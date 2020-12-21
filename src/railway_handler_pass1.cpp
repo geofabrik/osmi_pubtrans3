@@ -225,10 +225,14 @@ void RailwayHandlerPass1::handle_stop(const osmium::OSMObject& object, const cha
 }
 
 void RailwayHandlerPass1::way(const osmium::Way& way) {
-    if (m_output.options().stops || m_output.options().stations || m_output.options().platforms) {
-        const char* railway = way.get_value_by_key("railway");
-        const char* public_transport = way.get_value_by_key("public_transport");
-        handle_stop(way, public_transport, railway);
+    try {
+        if (m_output.options().stops || m_output.options().stations || m_output.options().platforms) {
+            const char* railway = way.get_value_by_key("railway");
+            const char* public_transport = way.get_value_by_key("public_transport");
+            handle_stop(way, public_transport, railway);
+        }
+    } catch (osmium::invalid_location& err) {
+        m_output.verbose_output() << err.what() << '\n';
     }
 }
 
