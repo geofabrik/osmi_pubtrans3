@@ -178,6 +178,7 @@ int main(int argc, char* argv[]) {
     {
         auto location_index = map_factory.create_map(options.location_index_type);
         location_handler_type location_handler(*location_index);
+        location_handler.ignore_errors();
         RailwayHandlerPass1 railway_handler1(writer, options, verbose_output, must_on_track, must_on_track_handles);
 
         verbose_output << "Pass 2 ...";
