@@ -39,6 +39,7 @@ struct InvalidFieldIndexes {
     static constexpr int unknown_route_type = 18;
     static constexpr int stop_is_not_node = 19;
     static constexpr int error_over_non_ferry = 20;
+    static constexpr int stops_misordered = 21;
 };
 
 /// indexes of fields – error layers
@@ -84,6 +85,7 @@ RouteWriter::RouteWriter(OGRWriter& writer, Options& options,
     m_ptv2_routes_invalid.add_field("unknown_route_type", OFTString, 1);
     m_ptv2_routes_invalid.add_field("stop_is_not_node", OFTString, 1);
     m_ptv2_routes_invalid.add_field("error_over_non_ferry", OFTString, 1);
+    m_ptv2_routes_invalid.add_field("stops_misordered", OFTString, 1);
     m_ptv2_error_lines.add_field("rel_id", OFTString, 10);
     m_ptv2_error_lines.add_field("from", OFTString, MAX_FIELD_LENGTH);
     m_ptv2_error_lines.add_field("to", OFTString, MAX_FIELD_LENGTH);
@@ -217,6 +219,9 @@ void RouteWriter::write_invalid_route(const osmium::Relation& relation, std::vec
     }
     if ((validation_result & RouteError::NO_FERRY) == RouteError::NO_FERRY) {
         feature.set_field(InvalidFieldIndexes::error_over_non_ferry, "T");
+    }
+    if ((validation_result & RouteError::STOP_MISORDERED) == RouteError::STOP_MISORDERED) {
+        feature.set_field(InvalidFieldIndexes::stops_misordered, "T");
     }
     feature.add_to_layer();
 }

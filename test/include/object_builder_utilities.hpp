@@ -25,6 +25,11 @@ using tagmap = std::map<std::string, std::string>;
 
 namespace test_utils {
 
+	bool file_exists(std::string& path) {
+		struct stat buffer;
+		return (stat(path.c_str(), &buffer) == 0);
+	}
+
     void add_tags(osmium::memory::Buffer& buffer, osmium::builder::Builder* builder, const tagmap& tags) {
         osmium::builder::TagListBuilder tl_builder(buffer, builder);
         for (tagmap::const_iterator it = tags.begin(); it != tags.end(); it++) {

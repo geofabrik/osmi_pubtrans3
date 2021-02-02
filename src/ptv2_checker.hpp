@@ -42,6 +42,22 @@ enum class BackOrFront : char {
     BACK = 2
 };
 
+struct WayNodeWithOrderID {
+	/// Node ID
+	osmium::object_id_type id;
+	/// index (= offset from begin) of the way in a list of all member ways with an empty role
+	size_t way_index;
+	bool found = false;
+
+	explicit WayNodeWithOrderID(osmium::object_id_type node_ref, size_t index) :
+			id(node_ref),
+			way_index(index) {}
+
+	bool operator<(const WayNodeWithOrderID& rhs) const {
+		return this->way_index < rhs.way_index || (this->way_index == rhs.way_index && this->id < rhs.id);
+	}
+};
+
 /**
  * This class provides methods to check the validity of a route relation.
  */
@@ -52,6 +68,10 @@ class PTv2Checker {
             const osmium::OSMObject* object, const bool seen_stop_platform);
 
     RouteError handle_errorneous_stop_platform(const osmium::Relation& relation, const osmium::OSMObject* object);
+
+    RouteError handle_stop_not_on_way(const osmium::Relation& relation, const osmium::Node* node);
+
+    RouteError handle_stop_wrong_order(const osmium::Relation& relation, const osmium::Node* node);
 
     RouteError handle_unknown_role(const osmium::Relation& relation, const osmium::OSMObject* object, const char* role);
 

@@ -62,7 +62,9 @@ enum class RouteError : uint32_t {
     /// A stop member is not a node.
     STOP_IS_NOT_NODE = 16384,
     /// A ferry route uses a way which is not a ferry way.
-    NO_FERRY = 32768
+    NO_FERRY = 32768,
+	/// A stop position is not in right order compared to the order of the member ways.
+	STOP_MISORDERED = 65536
 };
 
 inline RouteError& operator|= (RouteError& a, const RouteError& b) {

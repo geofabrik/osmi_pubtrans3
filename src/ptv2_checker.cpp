@@ -6,7 +6,7 @@
  */
 
 #include "ptv2_checker.hpp"
-
+#include <osmium/index/id_set.hpp>
 #include <assert.h>
 
 
@@ -225,6 +225,22 @@ RouteError PTv2Checker::check_platform_tags(const osmium::Relation& relation, co
 
 RouteError PTv2Checker::check_roles_order_and_type(const osmium::Relation& relation,
         std::vector<const osmium::OSMObject*>& member_objects) {
+	// Build an index of all nodes of all member ways (except platforms)
+	std::vector<WayNodeWithOrderID> node_ids_rank;
+    std::vector<const osmium::OSMObject*>::const_iterator obj_it = member_objects.cbegin();
+    osmium::RelationMemberList::const_iterator member_it = relation.members().cbegin();
+    size_t way_count = 0;
+    for (; obj_it != member_objects.cend(), member_it != relation.members().cend();
+            ++obj_it, ++member_it) {
+		if (member_it->type() == osmium::item_type::way && !strcmp(member_it->role(), "") && *obj_it) {
+			const osmium::Way* way = static_cast<const osmium::Way*>(*obj_it);
+			for (const auto nref : way->nodes()) {
+				node_ids_rank.emplace_back(nref.ref(), way_count);
+			}
+			++way_count;
+		}
+	}
+    std::sort(node_ids_rank.begin(), node_ids_rank.end());
     // Have we already passed a member which is neither a stop nor a platform?
     bool seen_road_member = false;
     // Have we already passed a member which is a stop or a platform?
@@ -236,8 +252,9 @@ RouteError PTv2Checker::check_roles_order_and_type(const osmium::Relation& relat
     if (type == RouteType::NONE) {
         error |= RouteError::UNKNOWN_TYPE;
     }
-    std::vector<const osmium::OSMObject*>::const_iterator obj_it = member_objects.cbegin();
-    osmium::RelationMemberList::const_iterator member_it = relation.members().cbegin();
+    std::vector<WayNodeWithOrderID>::iterator last_stop = node_ids_rank.begin();
+    obj_it = member_objects.cbegin();
+    member_it = relation.members().cbegin();
     for (; obj_it != member_objects.cend(), member_it != relation.members().cend();
             ++obj_it, ++member_it) {
         if (*obj_it == nullptr) {
@@ -274,6 +291,33 @@ RouteError PTv2Checker::check_roles_order_and_type(const osmium::Relation& relat
             }
         } else if (strcmp(member_it->role(), "") && !is_stop(member_it->role()) && !is_platform(member_it->role())) {
             error |= handle_unknown_role(relation, object, member_it->role());
+        }
+        if (member_it->type() == osmium::item_type::node && *obj_it != nullptr && is_stop(member_it->role())) {
+        	if (node_ids_rank.empty()) {
+				error |= handle_stop_not_on_way(relation, static_cast<const osmium::Node*>(*obj_it));
+			} else {
+				auto node_ids_it = std::find_if(
+						last_stop,
+						node_ids_rank.end(),
+						[&member_it](const WayNodeWithOrderID& val) { return val.id == member_it->ref() && !val.found; }
+				);
+				if (node_ids_it == node_ids_rank.end()) {
+					// Nothing found after the last stop, so lets start again at the fron.
+					node_ids_it = std::find_if(
+							node_ids_rank.begin(),
+							last_stop,
+							[&member_it](const WayNodeWithOrderID& val) { return val.id == member_it->ref() && !val.found; }
+					);
+				}
+				if (node_ids_it == last_stop && member_it->ref() != node_ids_it->id) {
+					error |= handle_stop_not_on_way(relation, static_cast<const osmium::Node*>(*obj_it));
+				} else if (node_ids_it->way_index < last_stop->way_index) {
+					error |= handle_stop_wrong_order(relation, static_cast<const osmium::Node*>(*obj_it));
+				} else {
+					node_ids_it->found = true;
+					last_stop = node_ids_it;
+				}
+			}
         }
     }
     if (!seen_road_member && !incomplete) {
@@ -332,6 +376,18 @@ RouteError PTv2Checker::handle_errorneous_stop_platform(const osmium::Relation& 
         }
     }
     return RouteError::STOPPLTF_AFTER_ROUTE;
+}
+
+RouteError PTv2Checker::handle_stop_not_on_way(const osmium::Relation& relation, const osmium::Node* node) {
+	if (!node) std::cerr << "XXXXXXX not node\n";
+	if (!(node->location().valid())) std::cerr << "XXXXXXXX location invalid\n";
+	m_writer.write_error_point(relation, node->id(), node->location(), "stop not on way", 0);
+    return RouteError::STOP_NOT_ON_WAY;
+}
+
+RouteError PTv2Checker::handle_stop_wrong_order(const osmium::Relation& relation, const osmium::Node* node) {
+	m_writer.write_error_point(relation, node->id(), node->location(), "stop not on way", 0);
+    return RouteError::STOP_MISORDERED;
 }
 
 RouteError PTv2Checker::handle_unknown_role(const osmium::Relation& relation, const osmium::OSMObject* object, const char* role) {

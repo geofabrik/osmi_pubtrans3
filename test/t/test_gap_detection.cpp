@@ -16,11 +16,6 @@
 #include <gdalcpp.hpp>
 #include <ptv2_checker.hpp>
 
-bool file_exists(std::string& path) {
-    struct stat buffer;
-    return (stat(path.c_str(), &buffer) == 0);
-}
-
 static osmium::item_type NODE = osmium::item_type::node;
 static osmium::item_type WAY = osmium::item_type::way;
 static osmium::item_type RELATION = osmium::item_type::relation;
@@ -33,7 +28,7 @@ TEST_CASE("check if gap detection works") {
     srand (time(NULL));
     options.output_directory += std::to_string(rand());
     options.output_directory += "-testoutput.sqlite";
-    if (file_exists(options.output_directory)) {
+    if (test_utils::file_exists(options.output_directory)) {
         std::cerr << options.output_directory << " already exists!\n";
         exit(1);
     }
