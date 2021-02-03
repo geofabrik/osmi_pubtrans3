@@ -94,15 +94,16 @@ bool PTv2Checker::check_valid_road_way(const osmium::TagList& member_tags) {
 }
 
 bool PTv2Checker::check_valid_trolleybus_way(const osmium::TagList& member_tags) {
-    if (member_tags.has_tag("trolley_wire", "yes")) {
+    if (member_tags.has_tag("trolley_wire", "yes") || member_tags.has_tag("trolley_wire", "no")) {
         return check_valid_road_way(member_tags);
     }
     //TODO check direction (forward wire but using the way in opposite direction might cause problems ;-)
-    if (member_tags.has_tag("trolley_wire:forward", "yes") || member_tags.has_tag("trolley_wire", "forward")) {
+    if (member_tags.has_tag("trolley_wire:forward", "yes") || member_tags.has_tag("trolley_wire:forward", "no")
+            || member_tags.has_tag("trolley_wire", "forward")) {
         return check_valid_road_way(member_tags);
     }
-    return (member_tags.has_tag("trolley_wire:backward", "yes") || member_tags.has_tag("trolley_wire", "backward"))
-            && check_valid_road_way(member_tags);
+    return (member_tags.has_tag("trolley_wire:backward", "yes") || member_tags.has_tag("trolley_wire:backward", "no")
+            || member_tags.has_tag("trolley_wire", "backward")) && check_valid_road_way(member_tags);
 }
 
 bool PTv2Checker::is_ferry(const osmium::TagList& member_tags, bool permit_untagged_ways /* = false */) {
