@@ -17,6 +17,8 @@ RouteType PTv2Checker::get_route_type(const char* route) {
     assert(route);
     if (!strcmp(route, "train")) {
         return RouteType::TRAIN;
+    } else if (!strcmp(route, "light_rail")) {
+        return RouteType::LIGHT_RAIL;
     } else if (!strcmp(route, "subway")) {
         return RouteType::SUBWAY;
     } else if (!strcmp(route, "tram")) {
@@ -49,6 +51,8 @@ bool PTv2Checker::vehicle_tags_matches_route_type(const osmium::TagList& tags, R
         return tags.has_tag("trolleybus", "yes");
     case RouteType::TRAIN:
         return tags.has_tag("train", "yes");
+    case RouteType::LIGHT_RAIL:
+        return tags.has_tag("light_rail", "yes");
     case RouteType::TRAM:
         return tags.has_tag("tram", "yes");
     case RouteType::SUBWAY:
@@ -67,7 +71,7 @@ bool PTv2Checker::check_valid_railway_track(RouteType type, const osmium::TagLis
     if (!railway) {
         return is_ferry(member_tags);
     }
-    if (type == RouteType::TRAIN || type == RouteType::TRAM) {
+    if (type == RouteType::TRAIN || type == RouteType::LIGHT_RAIL || type == RouteType::TRAM) {
         if (!strcmp(railway, "rail") || !strcmp(railway, "light_rail") || !strcmp(railway, "tram") || !strcmp(railway, "subway")
                 || !strcmp(railway, "funicular") || !strcmp(railway, "preserved") || !strcmp(railway, "miniature") || !strcmp(railway, "narrow_gauge")) {
             return true;
@@ -144,6 +148,7 @@ BackOrFront PTv2Checker::roundabout_connected_to_next_way(const osmium::Way* pre
 RouteError PTv2Checker::is_way_usable(const osmium::Relation& relation, RouteType type, const osmium::Way* way) {
     switch (type) {
     case RouteType::TRAIN:
+    case RouteType::LIGHT_RAIL:
     case RouteType::TRAM:
     case RouteType::SUBWAY:
         if (!check_valid_railway_track(type, way->tags())) {
