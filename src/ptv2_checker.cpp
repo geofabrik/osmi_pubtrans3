@@ -390,7 +390,7 @@ RouteError PTv2Checker::handle_stop_not_on_way(const osmium::Relation& relation,
 }
 
 RouteError PTv2Checker::handle_stop_wrong_order(const osmium::Relation& relation, const osmium::Node* node) {
-	m_writer.write_error_point(relation, node->id(), node->location(), "stop not on way", 0);
+	m_writer.write_error_point(relation, node->id(), node->location(), "stop included in wrong order", 0);
     return RouteError::STOP_MISORDERED;
 }
 
