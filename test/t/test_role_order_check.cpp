@@ -188,9 +188,13 @@ TEST_CASE("check valid simple bus route") {
         buffer.commit();
         osmium::Node& node11 = test_utils::create_new_node(buffer, 11, osmium::Location{}, stop_pos);
         buffer.commit();
+        osmium::Node& node13 = test_utils::create_new_node(buffer, 13, osmium::Location{}, stop_pos);
+        buffer.commit();
+        osmium::Node& node99 = test_utils::create_new_node(buffer, 13, osmium::Location{}, stop_pos);
+        buffer.commit();
 
         std::vector<const osmium::NodeRef*> node_refs1 {new osmium::NodeRef(1), new osmium::NodeRef(2), new osmium::NodeRef(3), new osmium::NodeRef(4)};
-        std::vector<const osmium::NodeRef*> node_refs2 {new osmium::NodeRef(4), new osmium::NodeRef(5), new osmium::NodeRef(6), new osmium::NodeRef(13), new osmium::NodeRef(7)};
+        std::vector<const osmium::NodeRef*> node_refs2 {new osmium::NodeRef(4), new osmium::NodeRef(5), new osmium::NodeRef(6), new osmium::NodeRef(99), new osmium::NodeRef(7)};
         std::vector<const osmium::NodeRef*> node_refs3 {new osmium::NodeRef(7), new osmium::NodeRef(8), new osmium::NodeRef(9)};
         std::vector<const osmium::NodeRef*> node_refs4 {new osmium::NodeRef(9), new osmium::NodeRef(10), new osmium::NodeRef(11)};
         std::vector<const osmium::NodeRef*> node_refs5 {new osmium::NodeRef(13), new osmium::NodeRef(12), new osmium::NodeRef(11)};
@@ -209,6 +213,17 @@ TEST_CASE("check valid simple bus route") {
         SECTION("correct stop order – this is valid") {
             std::vector<osmium::object_id_type> ids = {1, 2, 8, 11, 1, 2, 3, 4, 5};
             std::vector<const osmium::OSMObject*> objects {&node1, &node2, &node8, &node11, &way1, &way2, &way3, &way4, &way5};
+
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
+            RouteError error = checker.check_roles_order_and_type(relation1, objects);
+            CHECK(error== RouteError::CLEAN);
+        }
+
+        SECTION("correct stop order but the route includes a loop") {
+            types = {NODE, NODE, NODE, NODE, NODE, WAY, WAY, WAY, WAY, WAY, WAY};
+            roles = {"stop", "stop", "stop", "stop", "stop", "", "", "", "", "", ""};
+            std::vector<osmium::object_id_type> ids = {1, 2, 8, 8, 13, 1, 2, 3, 4, 3, 5};
+            std::vector<const osmium::OSMObject*> objects {&node1, &node2, &node8, &node8, &node13, &way1, &way2, &way3, &way4, &way3, &way5};
 
             osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
             RouteError error = checker.check_roles_order_and_type(relation1, objects);
@@ -297,6 +312,17 @@ TEST_CASE("check valid simple bus route") {
             osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
             RouteError error = checker.check_roles_order_and_type(relation1, objects);
             CHECK((error & RouteError::STOP_NOT_ON_WAY) == RouteError::STOP_NOT_ON_WAY);
+        }
+
+        SECTION("correct stop order but the route includes a loop (one stop in the loop served twice, the other one once") {
+            types = {NODE, NODE, NODE, NODE, NODE, NODE, WAY, WAY, WAY, WAY, WAY, WAY};
+            roles = {"stop", "stop", "stop", "stop", "stop", "stop", "", "", "", "", "", ""};
+            std::vector<osmium::object_id_type> ids = {1, 2, 8, 10, 9, 13, 1, 2, 3, 4, 3, 5};
+            std::vector<const osmium::OSMObject*> objects {&node1, &node2, &node8, &node10, &node9, &node13, &way1, &way2, &way3, &way4, &way3, &way5};
+
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
+            RouteError error = checker.check_roles_order_and_type(relation1, objects);
+            CHECK(error== RouteError::CLEAN);
         }
     }
 

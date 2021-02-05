@@ -297,22 +297,28 @@ RouteError PTv2Checker::check_roles_order_and_type(const osmium::Relation& relat
 				error |= handle_stop_not_on_way(relation, static_cast<const osmium::Node*>(*obj_it));
 			} else {
 				auto node_ids_it = std::find_if(
-						last_stop,
+						node_ids_rank.begin(),
 						node_ids_rank.end(),
 						[&member_it](const WayNodeWithOrderID& val) { return val.id == member_it->ref() && !val.found; }
 				);
 				if (node_ids_it == node_ids_rank.end()) {
-					// Nothing found after the last stop, so lets start again at the fron.
-					node_ids_it = std::find_if(
-							node_ids_rank.begin(),
-							last_stop,
-							[&member_it](const WayNodeWithOrderID& val) { return val.id == member_it->ref() && !val.found; }
-					);
-				}
-				if (node_ids_it == last_stop && member_it->ref() != node_ids_it->id) {
 					error |= handle_stop_not_on_way(relation, static_cast<const osmium::Node*>(*obj_it));
 				} else if (node_ids_it->way_index < last_stop->way_index) {
-					error |= handle_stop_wrong_order(relation, static_cast<const osmium::Node*>(*obj_it));
+					// Search a second time. If the way is used twice by the road (T-like or a
+					// loop) and served in a later run instead, the first occurrence of this node
+					// in the nodes index is not the one we are looking for.
+					++node_ids_it;
+					node_ids_it = std::find_if(
+							node_ids_it,
+							node_ids_rank.end(),
+							[&member_it, &last_stop](const WayNodeWithOrderID& val) { return val.id == member_it->ref() && !val.found && val.way_index >= last_stop->way_index; }
+					);
+					if (node_ids_it == node_ids_rank.end()) {
+						error |= handle_stop_wrong_order(relation, static_cast<const osmium::Node*>(*obj_it));
+					} else {
+						node_ids_it->found = true;
+						last_stop = node_ids_it;
+					}
 				} else {
 					node_ids_it->found = true;
 					last_stop = node_ids_it;
@@ -379,8 +385,6 @@ RouteError PTv2Checker::handle_errorneous_stop_platform(const osmium::Relation& 
 }
 
 RouteError PTv2Checker::handle_stop_not_on_way(const osmium::Relation& relation, const osmium::Node* node) {
-	if (!node) std::cerr << "XXXXXXX not node\n";
-	if (!(node->location().valid())) std::cerr << "XXXXXXXX location invalid\n";
 	m_writer.write_error_point(relation, node->id(), node->location(), "stop not on way", 0);
     return RouteError::STOP_NOT_ON_WAY;
 }
