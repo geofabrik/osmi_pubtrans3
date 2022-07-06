@@ -33,6 +33,10 @@ RouteType PTv2Checker::get_route_type(const char* route) {
     return RouteType::NONE;
 }
 
+bool PTv2Checker::is_way(const char* role) {
+    return !strcmp(role, "") || !strcmp(role, "hail_and_ride");
+}
+
 bool PTv2Checker::is_stop(const char* role) {
     return !strcmp(role, "stop") || !strcmp(role, "stop_entry_only") || !strcmp(role, "stop_exit_only");
 }
