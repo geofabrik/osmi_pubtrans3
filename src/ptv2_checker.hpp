@@ -97,6 +97,13 @@ public:
     RouteType get_route_type(const char* route);
 
     /**
+     * Is the role a way (including the empty string and `hail_and_stop`)?
+     *
+     * \param role string
+     */
+    bool is_way(const char* role);
+	
+    /**
      * Is the role a stop (including `stop_exit_only` and `stop_entry_only`)?
      *
      * \param role string
