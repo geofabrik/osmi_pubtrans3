@@ -237,7 +237,7 @@ RouteError PTv2Checker::check_roles_order_and_type(const osmium::Relation& relat
     size_t way_count = 0;
     for (; obj_it != member_objects.cend(), member_it != relation.members().cend();
             ++obj_it, ++member_it) {
-		if (member_it->type() == osmium::item_type::way && !strcmp(member_it->role(), "") && *obj_it) {
+		if (member_it->type() == osmium::item_type::way && is_way(member_it->role()) && *obj_it) {
 			const osmium::Way* way = static_cast<const osmium::Way*>(*obj_it);
 			for (const auto nref : way->nodes()) {
 				node_ids_rank.emplace_back(nref.ref(), way_count);
@@ -266,10 +266,10 @@ RouteError PTv2Checker::check_roles_order_and_type(const osmium::Relation& relat
             incomplete = true;
         }
         const osmium::OSMObject* object = *obj_it;
-        if (member_it->type() == osmium::item_type::way && !strcmp(member_it->role(), "")) {
+        if (member_it->type() == osmium::item_type::way && is_way(member_it->role())) {
             seen_road_member = true;
             error |= role_check_handle_road_member(relation, type, object, seen_stop_platform);
-        } else if (member_it->type() != osmium::item_type::way && !strcmp(member_it->role(), "")) {
+        } else if (member_it->type() != osmium::item_type::way && is_way(member_it->role())) {
             if (member_it->type() == osmium::item_type::node && object) {
                 const osmium::Node* node = static_cast<const osmium::Node*>(object);
                 m_writer.write_error_point(relation, node->id(), node->location(), "empty role for non-way object", 0);
@@ -294,7 +294,7 @@ RouteError PTv2Checker::check_roles_order_and_type(const osmium::Relation& relat
             if (object) {
                 check_platform_tags(relation, type, object);
             }
-        } else if (strcmp(member_it->role(), "") && !is_stop(member_it->role()) && !is_platform(member_it->role())) {
+        } else if (!is_way(member_it->role()) && !is_stop(member_it->role()) && !is_platform(member_it->role())) {
             error |= handle_unknown_role(relation, object, member_it->role());
         }
         if (member_it->type() == osmium::item_type::node && *obj_it != nullptr && is_stop(member_it->role())) {
@@ -453,7 +453,7 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
         return 0;
     }
     // check role and type
-    if (status == MemberStatus::BEFORE_FIRST && member_it->type() == osmium::item_type::way && !strcmp(role, "")) {
+    if (status == MemberStatus::BEFORE_FIRST && member_it->type() == osmium::item_type::way && is_way(role)) {
         status = MemberStatus::FIRST;
     }
     if (status == MemberStatus::BEFORE_FIRST) {
@@ -461,8 +461,8 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
         return 0;
     }
 
-    // check if it is a way
-    if (member_it->type() != osmium::item_type::way || strcmp(role, "")) {
+    // if it is not a way, report it as a gap
+    if (member_it->type() != osmium::item_type::way || !is_way(role)) {
         status = MemberStatus::AFTER_GAP;
         return 0;
     }

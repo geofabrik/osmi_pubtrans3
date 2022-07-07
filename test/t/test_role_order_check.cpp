@@ -65,6 +65,14 @@ TEST_CASE("check valid simple bus route") {
             CHECK(error == RouteError::CLEAN);
         }
 
+        SECTION("simple route with hail_and_ride section") {
+            std::vector<std::string> roles = {"stop", "stop", "stop", "hail_and_ride", "", ""};
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles);
+            std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+            RouteError error = checker.check_roles_order_and_type(relation1, objects);
+            CHECK(error == RouteError::CLEAN);
+        }
+
         SECTION("simple route only containing ways and platforms") {
             std::vector<std::string> roles = {"platform", "platform", "platform", "", "", ""};
             osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles);
