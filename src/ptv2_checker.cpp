@@ -33,6 +33,10 @@ RouteType PTv2Checker::get_route_type(const char* route) {
     return RouteType::NONE;
 }
 
+bool PTv2Checker::is_way(const char* role) {
+    return !strcmp(role, "") || !strcmp(role, "hail_and_ride");
+}
+
 bool PTv2Checker::is_stop(const char* role) {
     return !strcmp(role, "stop") || !strcmp(role, "stop_entry_only") || !strcmp(role, "stop_exit_only");
 }
@@ -233,7 +237,7 @@ RouteError PTv2Checker::check_roles_order_and_type(const osmium::Relation& relat
     size_t way_count = 0;
     for (; obj_it != member_objects.cend(), member_it != relation.members().cend();
             ++obj_it, ++member_it) {
-		if (member_it->type() == osmium::item_type::way && !strcmp(member_it->role(), "") && *obj_it) {
+		if (member_it->type() == osmium::item_type::way && is_way(member_it->role()) && *obj_it) {
 			const osmium::Way* way = static_cast<const osmium::Way*>(*obj_it);
 			for (const auto nref : way->nodes()) {
 				node_ids_rank.emplace_back(nref.ref(), way_count);
@@ -262,10 +266,10 @@ RouteError PTv2Checker::check_roles_order_and_type(const osmium::Relation& relat
             incomplete = true;
         }
         const osmium::OSMObject* object = *obj_it;
-        if (member_it->type() == osmium::item_type::way && !strcmp(member_it->role(), "")) {
+        if (member_it->type() == osmium::item_type::way && is_way(member_it->role())) {
             seen_road_member = true;
             error |= role_check_handle_road_member(relation, type, object, seen_stop_platform);
-        } else if (member_it->type() != osmium::item_type::way && !strcmp(member_it->role(), "")) {
+        } else if (member_it->type() != osmium::item_type::way && is_way(member_it->role())) {
             if (member_it->type() == osmium::item_type::node && object) {
                 const osmium::Node* node = static_cast<const osmium::Node*>(object);
                 m_writer.write_error_point(relation, node->id(), node->location(), "empty role for non-way object", 0);
@@ -290,7 +294,7 @@ RouteError PTv2Checker::check_roles_order_and_type(const osmium::Relation& relat
             if (object) {
                 check_platform_tags(relation, type, object);
             }
-        } else if (strcmp(member_it->role(), "") && !is_stop(member_it->role()) && !is_platform(member_it->role())) {
+        } else if (!is_way(member_it->role()) && !is_stop(member_it->role()) && !is_platform(member_it->role())) {
             error |= handle_unknown_role(relation, object, member_it->role());
         }
         if (member_it->type() == osmium::item_type::node && *obj_it != nullptr && is_stop(member_it->role())) {
@@ -449,7 +453,7 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
         return 0;
     }
     // check role and type
-    if (status == MemberStatus::BEFORE_FIRST && member_it->type() == osmium::item_type::way && !strcmp(role, "")) {
+    if (status == MemberStatus::BEFORE_FIRST && member_it->type() == osmium::item_type::way && is_way(role)) {
         status = MemberStatus::FIRST;
     }
     if (status == MemberStatus::BEFORE_FIRST) {
@@ -458,7 +462,7 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
     }
 
     // check if it is a way
-    if (member_it->type() != osmium::item_type::way || strcmp(role, "")) {
+    if (member_it->type() != osmium::item_type::way || !is_way(role)) {
         status = MemberStatus::AFTER_GAP;
         return 0;
     }
@@ -525,18 +529,21 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
             return 1;
         }
     }
-    else if (status == MemberStatus::SECOND) {
+    else if (status == MemberStatus::SECOND) { // we don't know which orientation we used for `previous_way`.
         if (previous_way->id() == way->id()) {
             // The first and the second way are equal. This is valid in some cases. So we just return.
             return 0;
         }
         //TODO secure for incomplete relations
-        if (way->nodes().front().ref() == previous_way->nodes().front().ref()
-                || way->nodes().front().ref() == previous_way->nodes().back().ref()) {
+        if (way->nodes().front().ref() == previous_way->nodes().back().ref() ||
+            (way->nodes().front().ref() == previous_way->nodes().front().ref() && !previous_way->tags().has_tag("oneway", "yes"))) {
+            // start normal status, entered from the front, exiting from the back.
             previous_way_end = BackOrFront::BACK;
             status = MemberStatus::NORMAL;
-        } else if (way->nodes().back().ref() == previous_way->nodes().front().ref()
-                || way->nodes().back().ref() == previous_way->nodes().back().ref()) {
+        } else if (!way->tags().has_tag("oneway", "yes") && // not oneway, then we can enter `way` from the back
+                   (way->nodes().back().ref() == previous_way->nodes().back().ref()
+                    || (way->nodes().back().ref() == previous_way->nodes().front().ref() && !previous_way->tags().has_tag("oneway", "yes")))) {
+            // start normal status, entered from the back, exiting from the front.
             previous_way_end = BackOrFront::FRONT;
             status = MemberStatus::NORMAL;
         } else {
@@ -548,7 +555,7 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
         const osmium::NodeRef* next_node = back_or_front_to_node_ref(previous_way_end, previous_way);
         if (way->nodes().front().ref() == next_node->ref()) {
             previous_way_end = BackOrFront::BACK;
-        } else if (way->nodes().back().ref() == next_node->ref()) {
+        } else if (way->nodes().back().ref() == next_node->ref() && !way->tags().has_tag("oneway", "yes")) {
             previous_way_end = BackOrFront::FRONT;
         } else {
             m_writer.write_error_way(relation, next_node->ref(), "gap", previous_way);
