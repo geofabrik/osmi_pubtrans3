@@ -294,7 +294,7 @@ TEST_CASE("check valid simple bus route") {
             CHECK((error & RouteError::STOP_MISORDERED) == RouteError::STOP_MISORDERED);
         }
 
-        SECTION("correct stop order but one highway member has an non-empty role") {
+        SECTION("correct stop order but one highway member has an invalid role") {
         	roles = {"stop", "stop", "stop", "stop", "forward", "", "", "", ""};
             std::vector<osmium::object_id_type> ids = {1, 2, 8, 11, 1, 2, 3, 4, 5};
             std::vector<const osmium::OSMObject*> objects {&node11, &node8, &node2, &node1, &way1, &way2, &way3, &way4, &way5};
@@ -304,7 +304,7 @@ TEST_CASE("check valid simple bus route") {
             CHECK((error & RouteError::STOP_NOT_ON_WAY) == RouteError::STOP_NOT_ON_WAY);
         }
 
-        SECTION("correct stop order but one highway member has an non-empty role") {
+        SECTION("correct stop order but one highway member has an invalid role") {
         	roles = {"stop", "stop", "stop", "stop", "", "", "forward", "", ""};
             std::vector<osmium::object_id_type> ids = {1, 2, 8, 11, 1, 2, 3, 4, 5};
             std::vector<const osmium::OSMObject*> objects {&node11, &node8, &node2, &node1, &way1, &way2, &way3, &way4, &way5};
@@ -312,6 +312,16 @@ TEST_CASE("check valid simple bus route") {
             osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
             RouteError error = checker.check_roles_order_and_type(relation1, objects);
             CHECK((error & RouteError::STOP_NOT_ON_WAY) == RouteError::STOP_NOT_ON_WAY);
+        }
+
+        SECTION("correct stop order, one highway member has a non-empy, valid role") {
+        	roles = {"stop", "stop", "stop", "stop", "", "", "hail_and_ride", "", ""};
+            std::vector<osmium::object_id_type> ids = {1, 2, 8, 11, 1, 2, 3, 4, 5};
+            std::vector<const osmium::OSMObject*> objects {&node11, &node8, &node2, &node1, &way1, &way2, &way3, &way4, &way5};
+
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
+            RouteError error = checker.check_roles_order_and_type(relation1, objects);
+            CHECK(error == RouteError::CLEAN);
         }
 
         SECTION("correct stop order but the route includes a loop (one stop in the loop served twice, the other one once") {
