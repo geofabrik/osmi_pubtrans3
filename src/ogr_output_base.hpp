@@ -25,10 +25,8 @@
 
 #include <osmium/geom/ogr.hpp>
 
-#ifdef ONLYMERCATOROUTPUT
+#ifdef MERCATOR_OUTPUT
     #include <osmium/geom/mercator_projection.hpp>
-#else
-    #include <osmium/geom/projection.hpp>
 #endif
 
 #include <osmium/util/verbose_output.hpp>
@@ -36,12 +34,12 @@
 #include "options.hpp"
 #include "ogr_writer.hpp"
 
-#ifdef ONLYMERCATOROUTPUT
+#ifdef MERCATOR_OUTPUT
     /// factory to build OGR geometries in Web Mercator projection
     using ogr_factory_type = osmium::geom::OGRFactory<osmium::geom::MercatorProjection>;
 #else
     /// factory to build OGR geometries with a coordinate transformation if necessary
-    using ogr_factory_type = osmium::geom::OGRFactory<osmium::geom::Projection>;
+    using ogr_factory_type = osmium::geom::OGRFactory<>;
 #endif
 
 /**
@@ -54,9 +52,8 @@ protected:
     OGRWriter& m_writer;
 
     /**
-     * If ONLYMERCATOROUTPUT is defined, output coordinates are always Web
-     * Mercator coordinates. If it is not defined, we will transform them if
-     * the output SRS is different from the input SRS (4326).
+     * If MERCATOR_OUTPUT is defined, output coordinates are always Web
+     * Mercator coordinates. If it is not defined, we write them using innput SRS (EPSG:4326).
      */
 
     ogr_factory_type m_factory;
@@ -85,13 +82,10 @@ public:
     osmium::util::VerboseOutput& verbose_output();
 
     inline bool coordinates_valid(const osmium::Location& location) {
-#ifdef ONLYMERCATOROUTPUT
+#ifdef MERCATOR_OUTPUT
         return location.valid() && location.lat() < UPPER_LIMIT_LATITUDE && location.lat() > -UPPER_LIMIT_LATITUDE;
 #else
-        return location.valid() && (
-                   m_options.srs != 3857 ||
-                   (location.lat() < UPPER_LIMIT_LATITUDE && location.lat() > -UPPER_LIMIT_LATITUDE)
-               );
+        return location.valid();
 #endif
     }
 

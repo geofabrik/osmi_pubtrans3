@@ -35,11 +35,8 @@ void print_help(char* arg0) {
               << "General Options:\n" \
               << "  -h, --help           This help message.\n" \
               << "  -f, --format         Output format (default: SQlite)\n" \
-              << "  -i, --index          Set index type for location index (default: sparse_mem_array)\n";
-#ifndef ONLYMERCATOROUTPUT
-    std::cerr << "  -s EPSG, --srs=ESPG  Output projection (EPSG code) (default: 3857)\n";
-#endif
-    std::cerr << "  -v, --verbose        Verbose output\n" \
+              << "  -i, --index          Set index type for location index (default: sparse_mem_array)\n" \
+              << "  -v, --verbose        Verbose output\n" \
               << "\n" \
               << "Content Related Options:\n" \
               << "--no-crossings        Don't write the crossings layer.\n" \
@@ -49,6 +46,11 @@ void print_help(char* arg0) {
               << "--no-stations         Don't write the stations layer.\n" \
               << "--no-stops            Don't write the stops layer.\n" \
               << "                      are mapped on the way which represents the track.\n";
+#ifdef MERCATOR_OUTPUT
+    std::cerr << "Output is written in Web Mercator projection (EPSG:3857).\n";
+#else
+    std::cerr << "Output is written as unprojected WGS84 coordinates (EPSG:4326).\n";
+#endif
 }
 
 int main(int argc, char* argv[]) {
@@ -70,7 +72,6 @@ int main(int argc, char* argv[]) {
         {"no-railway-details",   no_argument, 0, NO_RAILWAY_DETAILS},
         {"no-stations",   no_argument, 0, NO_STATIONS},
         {"no-stops",   no_argument, 0, NO_STOPS},
-        {"srs", required_argument, 0, 's'},
         {"verbose",   no_argument, 0, 'v'},
         {0, 0, 0, 0}
     };
@@ -78,7 +79,7 @@ int main(int argc, char* argv[]) {
     Options options;
 
     while (true) {
-        int c = getopt_long(argc, argv, "hf:i:s:v", long_options, 0);
+        int c = getopt_long(argc, argv, "hf:i:v", long_options, 0);
         if (c == -1) {
             break;
         }
@@ -102,21 +103,6 @@ int main(int argc, char* argv[]) {
                     print_help(argv[0]);
                     exit(1);
                 }
-                break;
-            case 's':
-#ifdef ONLYMERCATOROUTPUT
-                std::cerr << "ERROR: Usage of output projections other than " \
-                        "EPSG:3857 is not compiled into this binary.\n";
-                print_help(argv[0]);
-                exit(1);
-#else
-                if (optarg) {
-                    options.srs = atoi(optarg);
-                } else {
-                    print_help(argv[0]);
-                    exit(1);
-                }
-#endif
                 break;
             case NO_CROSSINGS:
                 options.crossings = false;

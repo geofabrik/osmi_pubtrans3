@@ -36,7 +36,7 @@ set(AUTHOR "Michael Reichert <michael.reichert@geofabrik.de>")
 find_package(Boost)
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
-find_package(Osmium COMPONENTS io proj gdal)
+find_package(Osmium COMPONENTS io gdal)
 include_directories(SYSTEM ${OSMIUM_INCLUDE_DIRS})
 
 #-----------------------------------------------------------------------------

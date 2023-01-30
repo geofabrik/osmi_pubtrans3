@@ -22,8 +22,10 @@
 
 OGROutputBase::OGROutputBase(OGRWriter& writer, osmium::util::VerboseOutput& verbose_output, Options& options) :
         m_writer(writer),
-#ifndef ONLYMERCATOROUTPUT
-        m_factory(osmium::geom::Projection(options.srs)),
+#ifdef MERCATOR_OUTPUT
+        m_factory(osmium::geom::MercatorProjection()),
+#else
+        m_factory(),
 #endif
         m_verbose_output(verbose_output),
         m_options(options) { }

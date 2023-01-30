@@ -7,6 +7,12 @@
 
 #include "ogr_writer.hpp"
 
+#ifdef MERCATOR_OUTPUT
+    constexpr int SRS = 3857;
+#else
+    constexpr int SRS = 4326;
+#endif
+
 OGRWriter::OGRWriter(Options& options, osmium::util::VerboseOutput& verbose_output) :
     m_verbose_output(verbose_output),
     m_options(options),
@@ -77,7 +83,7 @@ void OGRWriter::ensure_writeable_dataset(const char* layer_name) {
         output_filename += '/';
         output_filename += layer_name;
         std::unique_ptr<gdalcpp::Dataset> ds {new gdalcpp::Dataset(m_options.output_format,
-                output_filename, gdalcpp::SRS(m_options.srs), get_gdal_default_dataset_options(m_options.output_format))};
+                output_filename, gdalcpp::SRS(SRS), get_gdal_default_dataset_options(m_options.output_format))};
         m_datasets.push_back(std::move(ds));
         m_datasets.back()->enable_auto_transactions(10000);
     }
