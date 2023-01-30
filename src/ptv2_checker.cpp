@@ -470,7 +470,8 @@ int PTv2Checker::gap_detector_member_handling(const osmium::Relation& relation, 
     }
     // special treatment for roundabouts
     // Mappers don't have to split roundabouts if they are used by routes.
-    if (way->tags().has_tag("junction", "roundabout") && way->nodes().ends_have_same_id()) {
+    const char* junction = way->get_value_by_key("junction");
+    if (way->nodes().ends_have_same_id() && junction && (!strcmp(junction, "roundabout") || !strcmp(junction, "circular"))) {
         if (status == MemberStatus::AFTER_ROUNDABOUT) {
             // roundabout after another roundabout, this is an impossible geometry and shoud be fixed
             m_writer.write_error_way(relation, 0, "roundabout after roundabout", way);
