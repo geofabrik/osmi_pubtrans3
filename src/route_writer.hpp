@@ -20,7 +20,8 @@ enum class RouteType : char {
     FERRY,
     TRAIN,
     TRAM,
-    SUBWAY
+    SUBWAY,
+    LIGHT_RAIL
 };
 
 /**
