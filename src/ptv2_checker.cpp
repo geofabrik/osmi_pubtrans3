@@ -34,11 +34,11 @@ RouteType PTv2Checker::get_route_type(const char* route) {
 }
 
 bool PTv2Checker::is_stop(const char* role) {
-    return !strcmp(role, "stop") || !strcmp(role, "stop_entry_only") || !strcmp(role, "stop_exit_only");
+    return !strcmp(role, "stop") || !strcmp(role, "stop_entry_only") || !strcmp(role, "stop_exit_only") || !strcmp(role, "stop_on_demand");
 }
 
 bool PTv2Checker::is_platform(const char* role) {
-    return !strcmp(role, "platform") || !strcmp(role, "platform_entry_only") || !strcmp(role, "platform_exit_only");
+    return !strcmp(role, "platform") || !strcmp(role, "platform_entry_only") || !strcmp(role, "platform_exit_only") || !strcmp(role, "platform_on_demand");
 }
 
 bool PTv2Checker::vehicle_tags_matches_route_type(const osmium::TagList& tags, RouteType type) {
