@@ -81,9 +81,17 @@ TEST_CASE("check valid simple bus route") {
             CHECK(error == RouteError::EMPTY_ROLE_NON_WAY);
         }
 
-        SECTION("unknown type") {;
+        SECTION("light_rail type") {;
             std::vector<std::string> roles = {"platform", "platform", "platform", "", "", ""};
             osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, test_utils::get_light_rail_route_tags(), ids, types, roles);
+            std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+            RouteError error = checker.check_roles_order_and_type(relation1, objects);
+            CHECK(error == RouteError::CLEAN);
+        }
+
+        SECTION("unknown type") {;
+            std::vector<std::string> roles = {"platform", "platform", "platform", "", "", ""};
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, test_utils::get_wagonway_route_tags(), ids, types, roles);
             std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
             RouteError error = checker.check_roles_order_and_type(relation1, objects);
             CHECK(error == RouteError::UNKNOWN_TYPE);

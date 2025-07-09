@@ -137,6 +137,14 @@ namespace test_utils {
         return train_route_tags;
     }
 
+    std::map<std::string, std::string> get_wagonway_route_tags() {
+        std::map<std::string, std::string> train_route_tags;
+        train_route_tags.emplace("type", "route");
+        train_route_tags.emplace("route", "wagonway");
+        train_route_tags.emplace("public_transport:version", "2");
+        return train_route_tags;
+    }
+
     int delete_file(const char* path, const struct stat*, int, struct FTW*) {
         int result = remove(path);
         if (result) {
