@@ -218,8 +218,8 @@ TEST_CASE("check if gap detection works") {
             CHECK(checker.find_gaps(relation1, objects) == 0);
         }
 
-        SECTION("fifth and sixth way not ordered properly in the member list") {
-            std::vector<osmium::object_id_type> ids = {1, 2, 1, 2, 3, 4, 7, 5};
+        SECTION("fifth and sixth way ordered properly in the member list") {
+            std::vector<osmium::object_id_type> ids = {1, 2, 1, 2, 3, 4, 5, 7};
             std::vector<const osmium::NodeRef*> node_refs7 {new osmium::NodeRef(13), new osmium::NodeRef(14)};
             osmium::Way& way7 = test_utils::create_way(buffer, 7, node_refs7, tags1);
             buffer.commit();
@@ -227,6 +227,17 @@ TEST_CASE("check if gap detection works") {
 
             osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
             CHECK(checker.find_gaps(relation1, objects) == 0);
+        }
+
+        SECTION("fifth and sixth way not ordered properly in the member list") {
+            std::vector<osmium::object_id_type> ids = {1, 2, 1, 2, 3, 4, 7, 5};
+            std::vector<const osmium::NodeRef*> node_refs7 {new osmium::NodeRef(13), new osmium::NodeRef(14)};
+            osmium::Way& way7 = test_utils::create_way(buffer, 7, node_refs7, tags1);
+            buffer.commit();
+            std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, &way1, &way2, &way3, &way4, &way7, &way5};
+
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
+            CHECK(checker.find_gaps(relation1, objects) == 1);
         }
 
         SECTION("fifth and sixth are diverging branches of the route") {
