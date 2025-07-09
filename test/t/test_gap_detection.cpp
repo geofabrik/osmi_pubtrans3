@@ -250,6 +250,50 @@ TEST_CASE("check if gap detection works") {
             osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
             CHECK(checker.find_gaps(relation1, objects) == 1);
         }
+
+        SECTION("route with branch and loop at the end of the branch (inspired by relation 13327766)") {
+            std::vector<osmium::object_id_type> ids = {1, 3, 13, 8, 17, 1, 2, 3, 9, 10, 11, 12, 9, 4, 5};
+            std::vector<const osmium::NodeRef*> node_refs9 {new osmium::NodeRef(9), new osmium::NodeRef(15),
+                new osmium::NodeRef(16), new osmium::NodeRef(17), new osmium::NodeRef(18)};
+            std::vector<const osmium::NodeRef*> node_refs10 {new osmium::NodeRef(18), new osmium::NodeRef(19),
+                new osmium::NodeRef(20)};
+            std::vector<const osmium::NodeRef*> node_refs11 {new osmium::NodeRef(20), new osmium::NodeRef(21),
+                new osmium::NodeRef(22)};
+            std::vector<const osmium::NodeRef*> node_refs12 {new osmium::NodeRef(22), new osmium::NodeRef(18)};
+            osmium::Way& way9 = test_utils::create_way(buffer, 9, node_refs9, tags1);
+            osmium::Way& way10 = test_utils::create_way(buffer, 10, node_refs10, tags1);
+            osmium::Way& way11 = test_utils::create_way(buffer, 11, node_refs11, tags1);
+            osmium::Way& way12 = test_utils::create_way(buffer, 12, node_refs12, tags1);
+            buffer.commit();
+            std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, nullptr, nullptr, nullptr, &way1, &way2, &way3, &way9,
+                &way10, &way11, &way12, &way9, &way4, &way5};
+            types = {NODE, NODE, NODE, NODE, NODE, WAY, WAY, WAY, WAY, WAY, WAY, WAY, WAY, WAY, WAY};
+            roles = {"platform", "platform", "platform", "platform", "platform", "", "", "", "", "", "", "", "", "", ""};
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
+            CHECK(checker.find_gaps(relation1, objects) == 0);
+        }
+
+        SECTION("route with branch and loop at the end of the branch (inspired by relation 13327766) but broken") {
+            std::vector<osmium::object_id_type> ids = {1, 3, 13, 8, 17, 1, 2, 3, 9, 10, 12, 11, 9, 4, 5};
+            std::vector<const osmium::NodeRef*> node_refs9 {new osmium::NodeRef(9), new osmium::NodeRef(15),
+                new osmium::NodeRef(16), new osmium::NodeRef(17), new osmium::NodeRef(18)};
+            std::vector<const osmium::NodeRef*> node_refs10 {new osmium::NodeRef(18), new osmium::NodeRef(19),
+                new osmium::NodeRef(20)};
+            std::vector<const osmium::NodeRef*> node_refs11 {new osmium::NodeRef(20), new osmium::NodeRef(21),
+                new osmium::NodeRef(22)};
+            std::vector<const osmium::NodeRef*> node_refs12 {new osmium::NodeRef(22), new osmium::NodeRef(18)};
+            osmium::Way& way9 = test_utils::create_way(buffer, 9, node_refs9, tags1);
+            osmium::Way& way10 = test_utils::create_way(buffer, 10, node_refs10, tags1);
+            osmium::Way& way11 = test_utils::create_way(buffer, 11, node_refs11, tags1);
+            osmium::Way& way12 = test_utils::create_way(buffer, 12, node_refs12, tags1);
+            buffer.commit();
+            std::vector<const osmium::OSMObject*> objects {nullptr, nullptr, nullptr, nullptr, nullptr, &way1, &way2, &way3, &way9,
+                &way10, &way12, &way11, &way9, &way4, &way5};
+            types = {NODE, NODE, NODE, NODE, NODE, WAY, WAY, WAY, WAY, WAY, WAY, WAY, WAY, WAY, WAY};
+            roles = {"platform", "platform", "platform", "platform", "platform", "", "", "", "", "", "", "", "", "", ""};
+            osmium::Relation& relation1 = test_utils::create_relation(buffer, 1, tags_rel, ids, types, roles, objects);
+            CHECK(checker.find_gaps(relation1, objects) == 2);
+        }
     }
 
     SECTION("roundabout test") {
