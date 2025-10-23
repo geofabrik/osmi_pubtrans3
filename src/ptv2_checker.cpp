@@ -43,6 +43,10 @@ bool PTv2Checker::is_platform(const char* role) {
     return !strcmp(role, "platform") || !strcmp(role, "platform_entry_only") || !strcmp(role, "platform_exit_only");
 }
 
+bool PTv2Checker::is_hailandride(const char* role) {
+    return !strcmp(role, "hail_and_ride");
+}
+
 bool PTv2Checker::vehicle_tags_matches_route_type(const osmium::TagList& tags, RouteType type) {
     switch (type) {
     case RouteType::BUS:
@@ -295,6 +299,8 @@ RouteError PTv2Checker::check_roles_order_and_type(const osmium::Relation& relat
             if (object) {
                 check_platform_tags(relation, type, object);
             }
+        } else if (member_it->type() == osmium::item_type::way && is_hailandride(member_it->role())) {
+            // not an error - "hail_and_ride" way members are allowed.
         } else if (strcmp(member_it->role(), "") && !is_stop(member_it->role()) && !is_platform(member_it->role())) {
             error |= handle_unknown_role(relation, object, member_it->role());
         }

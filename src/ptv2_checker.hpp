@@ -104,6 +104,13 @@ public:
     bool is_stop(const char* role);
 
     /**
+     * Is the role a hail-and-ride segment?
+     *
+     * \param role string
+     */
+    bool is_hailandride(const char* role);
+
+    /**
      * Is the role a platform (including `platform_exit_only` and `platform_entry_only`)?
      *
      * \param role string
